@@ -325,6 +325,16 @@ for(const [type,source] of [[gl.VERTEX_SHADER,`
  void main(){
    float grain=1.;
    vec3 detail=vec3(0.);
+   if(abs(isOak-47.)<.5){
+     vec3 normal=${derivatives?'normalize(cross(dFdx(world),dFdy(world)))':'vec3(0.,0.,1.)'};
+     vec3 eye=perspective?normalize(center-world):orthoEye;
+     vec3 ray=reflect(-eye,normal);
+     float band=pow(.5+.5*cos(ray.y*8.+ray.x*3.),4.);
+     float polish=.82+.31*band+.12*abs(ray.z);
+     float brushing=.02*(noise(vec2(world.x+world.y,world.z)*vec2(36.,360.))-.5);
+     gl_FragColor=vec4(litSurface(shade*(polish+brushing)),1.);
+     return;
+   }
    if(abs(isOak-46.)<.5){
      vec3 eye=perspective?normalize(center-world):orthoEye;
      vec3 normal=${derivatives?'normalize(cross(dFdx(world),dFdy(world)))':'vec3(1.,0.,0.)'};
@@ -885,22 +895,49 @@ function build(){
    const ys=furnitureCorners(bounds,position).map(p=>p[1]);
    activePlacements.set(id,{transform:furnitureTransform(bounds,position),minY:Math.min(...ys),maxY:Math.max(...ys)});
  }
- function faucet(box,color){
-   const x=box.x+box.w/2,y=box.y+box.d/2,z=box.z;
-   const radius=box.w*.32,bend=box.h*.37,top=z+box.h*.62;
-   const rings=[[y,z,1,0],[y,top,1,0]];
-   for(let i=1;i<=12;i++){
-     const angle=Math.PI*i/12;
-     rings.push([y-bend*(1-Math.cos(angle)),top+bend*Math.sin(angle),Math.cos(angle),Math.sin(angle)]);
-   }
-   const point=(ring,index)=>{
-     const [cy,cz,ny,nz]=ring,a=index*Math.PI/6;
-     return [x+radius*Math.cos(a),cy+radius*ny*Math.sin(a),cz+radius*nz*Math.sin(a)];
+ function faucet(box){
+   const kitchen=box.name==='Armatur';
+   const x=box.x+box.w/2,y=box.y+box.d/2;
+   const z=kitchen?box.z:box.z-.002;
+   const steel=rgb('#bcc3c4'),dark=rgb('#4e5658');
+   const cylinder=(from,to,radius,color=steel)=>strut(from,to,radius,24,color,47);
+   const plate=(cx,cy,height,radius,color=steel)=>roundDisc(cx,cy,height,radius,color,47);
+   const column=kitchen?.253:.166;
+   cylinder([x,y,z],[x,y,z+.008],.023);
+   plate(x,y,z+.008,.023);
+   cylinder([x,y,z+.006],[x,y,z+column],kitchen?.013:.016);
+   plate(x,y,z+column,kitchen?.013:.016);
+
+   // The arc blends a rising kitchen neck or a short lavabo spout into its outlet.
+   const bend=kitchen?.044:.034;
+   const level=z+(kitchen?.242:.100);
+   const start=kitchen?y:y-.051;
+   const path=Array.from({length:highQuality?19:13},(_,index)=>{
+     const t=index/(highQuality?18:12)*Math.PI/2;
+     return kitchen
+       ?[start-bend*(1-Math.cos(t)),level+bend*Math.sin(t),Math.cos(t),Math.sin(t)]
+       :[start-bend*Math.sin(t),level-bend*(1-Math.cos(t)),Math.sin(t),Math.cos(t)];
+   });
+   const reach=kitchen?.165:.085;
+   if(kitchen)path.push([y-reach,level+bend+.014,0,1]);
+   else path.unshift([y-.009,level,0,1]);
+   const r=kitchen?.011:.010,sides=24;
+   const point=([cy,cz,ny,nz],index)=>{
+     const angle=index*Math.PI*2/sides;
+     return {point:[x+r*Math.cos(angle),cy+r*ny*Math.sin(angle),cz+r*nz*Math.sin(angle)],
+       normal:[Math.cos(angle),ny*Math.sin(angle),nz*Math.sin(angle)]};
    };
-   for(let i=0;i<rings.length-1;i++)for(let j=0;j<12;j++){
-     const a=point(rings[i],j),b=point(rings[i],j+1),c=point(rings[i+1],j+1),d=point(rings[i+1],j);
-     const tint=1.04+.36*Math.cos((j-2)*Math.PI/6);
-     for(const p of [a,b,c,a,c,d])data.push(...p,...color.map(channel=>channel*tint),0);
+   for(let i=1;i<path.length;i++)for(let j=0;j<sides;j++){
+     emitSurface([point(path[i-1],j),point(path[i-1],j+1),point(path[i],j+1),point(path[i],j)],steel,47);
+   }
+   const [tipY,tipZ]=path.at(-1);
+   cylinder([x,tipY+.005,tipZ-.017],[x,tipY+.005,tipZ],.009,dark);
+   plate(x,tipY+.005,tipZ-.0168,.009,dark);
+   if(kitchen){
+     cylinder([x-.024,y,z+.100],[x+.052,y,z+.100],.021);
+     cylinder([x+.037,y,z+.115],[x+.037,y,z+.174],.0055);
+   }else{
+     cylinder([x,y,z+column+.002],[x,y-.043,z+column+.006],.0055);
    }
  }
  function cooktopRings(box){
@@ -954,7 +991,7 @@ function build(){
  const subtract=(a,b)=>a.map((value,i)=>value-b[i]);
  const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
  const unit=v=>{const length=Math.hypot(...v);return v.map(value=>value/length);};
- function strut(start,end,radius,sides,color){
+ function strut(start,end,radius,sides,color,texture=0){
    const direction=unit(subtract(end,start));
    const right=unit(cross(direction,Math.abs(direction[1])>.99?[1,0,0]:[0,1,0]));
    const up=cross(right,direction);
@@ -969,7 +1006,7 @@ function build(){
      emitSurface([
        {point:point(start,a),normal:normal||a},{point:point(start,b),normal:normal||b},
        {point:point(end,b),normal:normal||b},{point:point(end,a),normal:normal||a}
-     ],color,0);
+     ],color,texture);
    }
  }
  function swivelChair(box){
@@ -1098,34 +1135,71 @@ function build(){
      close(grid[rows][j],grid[rows][j+1]);
    }
  }
- function washbasin(box,color){
+ function roundDisc(x,y,z,radius,color,texture=0){
+   for(let i=0;i<32;i++){
+     const edge=index=>[x+radius*Math.cos(index*Math.PI/16),y+radius*Math.sin(index*Math.PI/16),z];
+     for(const point of [[x,y,z],edge(i),edge(i+1)])data.push(...point,...color,texture);
+   }
+ }
+ function washbasin(box,color,kitchen=false){
    const {x,y,z,w,d,h}=box;
-   const rings=[
-     [w*.94,d*.94,z],[w,d,z+h*.88],[w*.986,d*.983,z+h],
-     [w*.83,d*.73,z+h*.975],[w*.73,d*.61,z+h*.76],[w*.50,d*.40,z+h*.28]
+   const top=kitchen?z+.003:z+h;
+   const innerY=kitchen?-.005:-.026;
+   const innerWidth=kitchen?w-.029:w-.054;
+   const innerDepth=kitchen?d-.025:d-.083;
+   const floor=top-(kitchen?.115:.074);
+   const texture=kitchen?47:0;
+   // Width, depth, height, Y offset and corner radius for each contour.
+   const rings=kitchen?[
+     [w,d,top-.004,0,.002],[w,d,top,0,.006],
+     [innerWidth+.006,innerDepth+.006,top,innerY,.015],
+     [innerWidth,innerDepth,top-.008,innerY,.016],
+     [innerWidth-.018,innerDepth-.019,floor+.014,innerY,.023],
+     [innerWidth-.044,innerDepth-.045,floor,innerY,.023]
+   ]:[
+     [w-.012,d-.014,z,0,.018],[w,d,top-.009,0,.018],
+     [w-.008,d-.008,top,0,.015],
+     [innerWidth+.012,innerDepth+.012,top,innerY,.029],
+     [innerWidth,innerDepth,top-.007,innerY,.029],
+     [innerWidth-.030,innerDepth-.026,floor+.019,innerY,.035],
+     [innerWidth-.069,innerDepth-.060,floor,innerY,.049]
    ];
-   const profile=([width,depth,height])=>{
-     const r=Math.min(width,depth)*.18;
-     const corners=[[1,1],[-1,1],[-1,-1],[1,-1]];
-     return corners.flatMap(([sx,sy],i)=>Array.from({length:7},(_,step)=>{
-       const a=(i+step/6)*Math.PI/2;
-       return [x+w/2+sx*(width/2-r)+r*Math.cos(a),y+d/2+sy*(depth/2-r)+r*Math.sin(a),height];
-     }));
-   };
-   const loops=rings.map(profile),samples=loops[0].length;
+   const segments=highQuality?12:8;
+   const loops=rings.map(([width,depth,height,shift,r])=>
+     [[1,1],[-1,1],[-1,-1],[1,-1]].flatMap(([sx,sy],index)=>
+       Array.from({length:segments+1},(_,step)=>{
+         const a=(index+step/segments)*Math.PI/2;
+         return [x+w/2+sx*(width/2-r)+r*Math.cos(a),y+d/2+shift+sy*(depth/2-r)+r*Math.sin(a),height];
+       })
+     )
+   );
+   const samples=loops[0].length;
    for(let i=0;i<loops.length-1;i++)for(let j=0;j<samples;j++){
      const k=(j+1)%samples;
-     const normal=[0,0,[.10,.48,1,.82,.54][i]];
-     emitSurface([loops[i][j],loops[i][k],loops[i+1][k],loops[i+1][j]].map(point=>({point,normal})),color,0);
+     const points=[loops[i][j],loops[i][k],loops[i+1][k],loops[i+1][j]];
+     const normal=unit(cross(subtract(points[1],points[0]),subtract(points[3],points[0])));
+     emitSurface(points.map(point=>({point,normal})),color,texture);
    }
-   const bottom=loops.at(-1),height=rings.at(-1)[2];
+   const cx=x+w/2,cy=y+d/2+innerY,bottom=loops.at(-1);
    for(let i=0;i<samples;i++){
-     for(const point of [[x+w/2,y+d/2,height],bottom[i],bottom[(i+1)%samples]])data.push(...point,...color.map(c=>c*.79),0);
+     for(const point of [[cx,cy,floor],bottom[i],bottom[(i+1)%samples]])data.push(...point,...color.map(c=>c*.92),texture);
    }
-   const drain=[x+w/2,y+d/2,height+.0008];
-   for(let i=0;i<24;i++){
-     const rim=t=>[drain[0]+.012*Math.cos(t*Math.PI/12),drain[1]+.012*Math.sin(t*Math.PI/12),drain[2]];
-     for(const point of [drain,rim(i),rim(i+1)])data.push(...point,.32,.36,.37,0);
+   const drainY=cy+(kitchen?.063:0),dark=rgb('#505555');
+   roundDisc(cx,drainY,floor+.0005,kitchen?.031:.019,dark,texture);
+   roundDisc(cx,drainY,floor+.0013,kitchen?.025:.016,kitchen?rgb('#a7afb0'):color,texture);
+   if(kitchen){
+     for(let i=0;i<8;i++){
+       const a=i*Math.PI/4;
+       roundDisc(cx+.016*Math.cos(a),drainY+.016*Math.sin(a),floor+.0017,.0027,dark);
+     }
+     roundDisc(cx,drainY,floor+.0017,.0034,dark);
+   }
+   const overflowY=cy+innerDepth/2-.012;
+   const overflowZ=top-(kitchen?.027:.024);
+   const opening={x:cx-(kitchen?.023:.031),y:overflowY-.003,z:overflowZ,w:kitchen?.046:.062,d:.004,h:kitchen?.014:.005};
+   roundedBox(opening,[.003,.001,.002],dark,0);
+   if(kitchen){
+     roundedBox({...opening,x:opening.x+.005,y:opening.y-.001,z:opening.z+.003,w:opening.w-.010,h:.008},[.002,.001,.002],color,47);
    }
  }
  function tvFurniture(box,color){
@@ -1333,7 +1407,7 @@ function build(){
      return;
    }
    if((b.name==='Armatur'||b.name==='Lavabo_Armatur')&&lo===b.y&&hi===b.y+b.d){
-     faucet(b,color);
+     faucet(b);
      return;
    }
    if(b.name==='Kochfeld'&&lo===b.y&&hi===b.y+b.d){
@@ -1358,7 +1432,7 @@ function build(){
        return;
      }
      if(b.name==='Spuele'){
-       washbasin({...b,z:b.z-.129,h:.142},rgb('#adb6b9'));
+       washbasin(b,rgb('#b1b8bb'),true);
        return;
      }
      if(b.name==='Spuelbecken')return;
