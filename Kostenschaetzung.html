@@ -10,9 +10,11 @@
 *{box-sizing:border-box}body{max-width:1250px;margin:0 auto;padding:clamp(12px,3vw,36px)}h1,h2,h3,p{margin:0}header,nav,.actions,.summary{display:flex;gap:12px;align-items:center;flex-wrap:wrap}header{justify-content:space-between;margin-bottom:18px}nav a,button{color:inherit;background:#f0f4ed;border:1px solid #cbd8cd;border-radius:8px;padding:7px 11px;text-decoration:none;font:inherit;cursor:pointer}button.primary{background:var(--green);color:white}.panel,.category{background:white;border:1px solid var(--line);border-radius:12px;padding:clamp(12px,2vw,20px);margin:12px 0}.summary{align-items:stretch}.summary>div{flex:1 1 155px}.summary strong{display:block;font-size:clamp(17px,2.4vw,28px);font-variant-numeric:tabular-nums}.total{color:var(--green)}small,.note{color:#53665c;font-size:.86rem}.panel p,.category p{margin:7px 0}.actions{margin-top:12px}.actions label{display:flex;gap:8px;align-items:center}.category summary{cursor:pointer;display:flex;align-items:baseline;justify-content:space-between;gap:12px}.category summary::before{content:'▸';color:var(--green)}.category[open] summary::before{content:'▾'}.category h2{font-size:18px;flex:1}.category output,.amount{font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}.table-scroll{overflow:auto}.estimate{width:100%;border-collapse:collapse;min-width:840px;margin-top:8px}th,td{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left;vertical-align:top}th{font-size:.81rem;color:#53665c;white-space:nowrap}th:first-child{width:36%}td label{font-weight:620}td small{display:block}td:first-child{min-width:210px}input,select{font:inherit;color:inherit;background:#fbfcfa;border:1px solid #cad6cb;border-radius:6px;padding:6px;max-width:100%}input[type=number]{width:93px;font-variant-numeric:tabular-nums}td select{width:100%;max-width:250px}td input[type=text]{width:100%}button.remove{padding:4px 8px}a{color:#2f5d4d}#save-status{min-height:1.4em;font-size:.85rem;color:#53665c}.sources{columns:2;column-width:265px}
 @media(max-width:620px){h1{font-size:1.6rem}.panel,.category{padding:12px}.summary{gap:8px}.summary>div{flex-basis:calc(50% - 8px)}.estimate{min-width:0}.estimate thead{display:none}.estimate tbody,.estimate tr,.estimate td{display:block}.estimate tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-bottom:1px solid var(--line);padding:9px 0}.estimate td{border:0;padding:3px;min-width:0;font-size:.88rem}.estimate td:first-child{grid-column:1/-1}.estimate td:nth-child(2){grid-column:1/-1}.estimate td[data-label]::before{content:attr(data-label);display:block;font-size:.72rem;color:#53665c}.estimate td input[type=number]{width:100%}.estimate td.amount{grid-column:1/-1}}
 .question-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(245px,100%),1fr));gap:.85rem;margin-top:12px}.question-grid label{display:grid;gap:4px}.question-grid select{width:100%}.question-grid [hidden]{display:none}
+#cost-gaps{margin:.55rem 0 0;padding-left:1.6rem}#cost-gaps li+li{margin-top:.36rem}#cost-gaps button{display:inline-flex;gap:.35rem .75rem;flex-wrap:wrap;text-align:left;align-items:baseline;padding:.35rem .65rem}#cost-gaps button small{white-space:nowrap}
+#bundle-dialog{max-width:min(95vw,580px);width:100%;max-height:85dvh;overflow:auto;border:1px solid var(--line);border-radius:12px;color:inherit;padding:18px}#bundle-dialog::backdrop{background:#1d30275d}#bundle-form>label,#bundle-positions label{display:block;margin:.35rem 0}#bundle-form fieldset{border:1px solid var(--line);border-radius:7px;margin-top:12px}#bundle-positions{max-height:31dvh;overflow:auto}
 </style>
 <script type="application/json" id="estimate-defaults">{"wardrobeWidths":{"main":"100","second":"100","entry":"200"},"furniture":{"removed":["fold-entry","night-left"],"added":[["extra-96be8547-8041-4cfe-aef6-cf3bec682727","night-left"]]},"selections":{"floor":"slate","kitchen":"#b4c4d9","bath":"#a8bbc4","bathWalls":"#ffffff","bathWall":"#c0cfbb","sideboard":"#b7abc7","sofa":"#9baeba","builtins":"#939e95","linoleum":"#d6c9ae","worktop":"current","showerFinish":"blue","sideWallFinish":"paint","showerGlass":"clear","linoFinish":"fine","kitchenHandle":"#d8b58d","bathHandle":"#798589","builtinsHandle":"wood","chairStyle":"shell","coffeeStyle":"wood","foldBed":"closed","parquet":"laengs","bath-tile":"neu"}}</script>
-<script src="Kostenschaetzung.js?v=modellflaeche-2" defer></script>
+<script src="Kostenschaetzung.js?v=kostenfokus-1" defer></script>
 </head>
 <body>
 <nav class="project-nav" aria-label="Seitennavigation"><a href="index.html" data-project="start">Startseite</a> <a href="Wohnen-und-Bad-360.html" data-project="blender">Blender-Ansichten (360°)</a> <a href="Kueche-Wohnen-3D.html" data-project="model">3D-Konfigurator</a> <a href="Kueche-Wohnen-3D.html?modus=begehen" data-project="walk">Begehung</a> <a href="Kostenschaetzung.html" data-project="cost" aria-current="page">Kostenschätzung</a></nav>
@@ -20,7 +22,8 @@
 <main>
 <section class="panel" aria-label="Budgetübersicht">
 <div class="summary">
-<div><small>Positionen</small><strong id="subtotal"></strong></div>
+<div><small>Offertierte Beträge</small><strong id="quoted-total"></strong></div>
+<div><small>Offene Richtwerte</small><strong id="open-total"></strong></div>
 <div><small>Planung &amp; Bauleitung</small><strong id="planning-total"></strong></div>
 <div><small>Reserve</small><strong id="reserve-total"></strong></div>
 <div class="total"><small>Gesamtbudget in CHF</small><strong id="grand-total"></strong></div>
@@ -36,6 +39,12 @@
 <p class="note">Ein Betrag unter «Offerte total CHF» ersetzt die berechnete Bandbreite der Position. Bei leerem Feld gelten wieder Menge und Richtpreise.</p>
 <p id="save-status" role="status"></p>
 </section>
+<section class="panel" aria-labelledby="cost-gaps-heading">
+<h2 id="cost-gaps-heading">Grösste offene Kostenspannen</h2>
+<p class="note">Differenz je Position vor Planung und Reserve. Wähle eine Position, um direkt zu ihren Preisen zu springen.</p>
+<ol id="cost-gaps"></ol>
+<p id="cost-gaps-empty" hidden>Keine aktive Position mit einer Preisspanne.</p>
+</section>
 <details class="panel" id="questionnaire">
 <summary><strong>Schätzung verfeinern · optionaler Fragebogen</strong></summary>
 <p>Beantworte, was du schon weisst. Die Antworten passen den Umfang und die Mengen an. Manuell gesetzte Mengen, Ausführungen und Offerten haben Vorrang. Eigene Einheitspreise bleiben je Ausführung gespeichert.</p>
@@ -48,6 +57,17 @@
 </form>
 </details>
 <div id="categories"></div>
+<dialog id="bundle-dialog" aria-labelledby="bundle-heading">
+<form id="bundle-form">
+<h2 id="bundle-heading">Sammelofferte erfassen</h2>
+<label>Bezeichnung <input name="name" required maxlength="100"></label>
+<label>Offerte total inkl. MwSt. in CHF <input name="quote" type="number" min="0" step="0.01" required></label>
+<fieldset><legend>Enthaltene Positionen</legend><div id="bundle-positions"></div></fieldset>
+<p class="note">Die ausgewählten Positionen zählen über die Sammelofferte. Nach dem Entfernen gelten ihre bisherigen Einstellungen.</p>
+<p id="bundle-status" role="status"></p>
+<div class="actions"><button class="primary" type="submit">Übernehmen</button><button id="bundle-cancel" type="button">Abbrechen</button></div>
+</form>
+</dialog>
 <section class="panel">
 <h2>Methodik und Quellen</h2>
 <p>Die Schätzung folgt dem Prinzip Mengen × Einheitspreise. SIA 112 beschreibt die Planungsphasen, SIA 102 die Leistungen und Honorare von Architektinnen und Architekten. Der CRB-Kostenplan eBKP-H (SN 506 511) gliedert die Kosten nach Bauelementen. Die Kategorien hier orientieren sich daran. Planung und Reserve sind frei einstellbare Budgetannahmen.</p>

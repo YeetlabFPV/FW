@@ -180,6 +180,7 @@ const initialState = {rows:{}, custom:[], planning:8, reserve:12};
 const state = read(localStorage,saveKey,initialState);
 state.rows ??= {};
 state.custom = Array.isArray(state.custom) ? state.custom : [];
+state.bundles = Array.isArray(state.bundles) ? state.bundles : [];
 const currentRows = new Map();
 const sections = new Map();
 
@@ -238,7 +239,8 @@ const scopeOptions={unknown:'Noch offen',retain:'Bestand behalten',renew:'Erneue
 const connectionOptions={unknown:'Noch offen',retain:'Am gleichen Ort',move:'Versetzen'};
 const questions=[
   ['kitchen','Küche insgesamt',{unknown:'Noch offen',retain:'Kein Küchenumbau',renew:'Küche umbauen'}],
-  ['cabinets','Küchenmöbel',scopeOptions],
+  ['cabinets','Küchenmöbel',{...scopeOptions,system:'Neue Systemküche',bespoke:'Schreinerküche nach Mass'}],
+  ['appliances','Küchengeräte',{unknown:'Einzeln festlegen',retain:'Alle bestehenden Geräte behalten',standard:'Alle neu · Standard',premium:'Alle neu · Premium'}],
   ['top','Küchenarbeitsplatte',scopeOptions],
   ['kitchenFloor','Küchenboden',scopeOptions],
   ['kitchenWater','Wasseranschlüsse Küche',connectionOptions],
@@ -247,9 +249,10 @@ const questions=[
   ['bathFloor','Badboden ausserhalb der Dusche',{...scopeOptions,coat:'Geeigneten Bestand beschichten'}],
   ['bathWalls','Badseitenwände',{...scopeOptions,coat:'Bestandsplättli übermalen'}],
   ['fixtures','WC, Lavabo und Unterschrank',scopeOptions],
-  ['bathShower','Duschplatz, Glas und Armatur',scopeOptions],
+  ['bathShower','Duschplatz, Glas und Armatur',{...scopeOptions,tray:'Neue flache Duschwanne'}],
   ['looseFurniture','Lose Möbel',{unknown:'Einzeln in der Schätzung festlegen',retain:'Alle vorhandenen Möbel behalten',renew:'Möbel gemäss Modell neu anschaffen'}],
   ['parquet','Parkett',{...scopeOptions,sand:'Bestand schleifen und versiegeln'}],
+  ['builtinsCount','Anzahl neue Einbauschränke'],
   ['paintScope','Zu streichende Fläche',{unknown:'Fläche manuell eingeben (optional)',all:'Alles · freie, nicht geplättelte Flächen'}],
   ['paintArea','Manuelle Malerfläche in m²'],
   ['spotCount','Anzahl neue Deckenspots']
@@ -273,13 +276,20 @@ function calculateQuestionnaire(){
   scope('parquet','i-parquet','sand');
   if(answers.bathFloor==='renew'&&configuration.selections['bath-tile']==='bestand')set('b-floor',{variant:'neu'});
   if(answers.cabinets==='retain')for(const id of ['k-cabinets','k-demo'])set(id,{active:false});
+  if(['system','bespoke'].includes(answers.cabinets))
+    set('k-cabinets',{variant:answers.cabinets==='system'?'standard':'bespoke'});
+  if(['retain','standard','premium'].includes(answers.appliances)){
+    for(const id of ['k-hob','k-oven','k-dishwasher','k-fridge','k-hood'])
+      set(id,answers.appliances==='retain'?{active:false}:{variant:answers.appliances});
+  }
   if(answers.kitchenWater==='retain'||answers.kitchenWater==='move')
     set('k-water',{variant:answers.kitchenWater==='move'?'move':'standard'});
   if(answers.bathWater==='retain'||answers.bathWater==='move')
     set('b-water',{variant:answers.bathWater==='retain'?'partial':'standard'});
   if(answers.fixtures==='retain')for(const id of ['b-wc','b-basin','b-cabinet'])set(id,{active:false});
+  if(answers.bathShower==='tray')set('b-shower',{variant:'tray'});
   if(answers.bathShower==='retain')for(const id of ['b-shower','b-glass','b-tap'])set(id,{active:false});
-  for(const [name,id] of [['paintArea','i-paint'],['spotCount','e-spots']]){
+  for(const [name,id] of [['paintArea','i-paint'],['spotCount','e-spots'],['builtinsCount','i-builtins']]){
     if(typeof answers[name]!=='number')continue;
     set(id,{quantity:answers[name]});
     if(name==='spotCount'&&answers[name]===0)set('e-controls',{active:false});
@@ -291,7 +301,7 @@ function calculateQuestionnaire(){
   if(answers.paintScope==='all'&&estimateModel){
     const bathRow=state.rows['b-walls'];
     const manualBath=Boolean(bathRow&&Object.keys(bathRow).length);
-    const includeBath=!manualBath&&answers.bath!=='retain'&&
+    const includeBath=!manualBath&&!coveredBy('b-walls')&&answers.bath!=='retain'&&
       !['coat','retain'].includes(answers.bathWalls)&&modelVariant(rows.find(row=>row.id==='b-walls'))==='paint';
     set('i-paint',{quantity:paintableArea(estimateModel,includeBath),fromModel:true});
     if(includeBath)set('b-walls',{active:false});
@@ -300,6 +310,9 @@ function calculateQuestionnaire(){
 }
 questionnaireEffects=calculateQuestionnaire();
 
+function coveredBy(id){
+  return state.bundles.find(bundle=>bundle.covers.includes(id));
+}
 function rowSettings(row){
   if(!row.variants)return {active:row.active, quantity:validNumber(row.quantity), unit:row.unit, low:validNumber(row.low), high:validNumber(row.high),quote:row.quote};
   const stored=record(row);
@@ -308,33 +321,61 @@ function rowSettings(row){
   const variant=[stored.variant,quotedVariant,answer?.variant,suggested].find(key=>Object.hasOwn(row.variants,key))??Object.keys(row.variants)[0];
   const reference=row.variants[variant], overrides=stored.prices?.[variant];
   const defaultQuantity=row.category==='furniture'?(furnitureQuantities[row.id]??0):row.quantity;
-  return {active:stored.active??(overrides?.quote!=null?true:answer?.active??!['heating','tv','laptop'].includes(row.id)),quantity:validNumber(row.id==='i-parquet'?defaultQuantity:answer?.fromModel?answer.quantity:stored.quantity??answer?.quantity??defaultQuantity),
+  return {active:!coveredBy(row.id)&&(stored.active??(overrides?.quote!=null?true:answer?.active??!['heating','tv','laptop'].includes(row.id))),quantity:validNumber(row.id==='i-parquet'?defaultQuantity:answer?.fromModel?answer.quantity:stored.quantity??answer?.quantity??defaultQuantity),
     unit:row.unit, variant, low:validNumber(overrides?.low??reference.low),high:validNumber(overrides?.high??reference.high),quote:overrides?.quote};
 }
 
-function amounts(row){
-  const {active,quantity,low,high,quote}=rowSettings(row);
+function amounts(row,settings=rowSettings(row)){
+  const {active,quantity,low,high,quote}=settings;
   if(active&&quote!=null)return [quote,quote];
   return active?[Math.min(low,high)*quantity,Math.max(low,high)*quantity]:[0,0];
 }
 const plus=(a,b)=>[a[0]+b[0],a[1]+b[1]];
 const factor=(pair,ratio)=>pair.map(value=>value*ratio);
 const range=pair=>pair[0]===pair[1]?nf.format(pair[0]):pair.map(value=>nf.format(value)).join(' – ');
-function totals(){
-  let sum=[0,0],planningBasis=[0,0];
+function calculateBudget(){
+  let quoteTotal=0,open=[0,0],planningBasis=[0,0];
+  const gaps=[];
   for(const [id,section] of sections){
-    const total=section.rows.map(amounts).reduce(plus,[0,0]);
-    section.total.textContent=range(total)+' CHF';
-    sum=plus(sum,total);
+    let total=[0,0];
+    for(const row of section.rows){
+      const settings=rowSettings(row), values=amounts(row,settings);
+      total=plus(total,values);
+      if(settings.active&&settings.quote!=null)quoteTotal+=settings.quote;
+      else open=plus(open,values);
+      if(values[1]>values[0])gaps.push({row,values,width:values[1]-values[0]});
+    }
     if(id!=='furniture'&&id!=='extras')planningBasis=plus(planningBasis,total);
-    for(const row of section.rows)currentRows.get(row.id).textContent=range(amounts(row));
   }
+  const sum=plus([quoteTotal,quoteTotal],open);
   const planning=factor(planningBasis,validNumber(state.planning)/100);
   const reserve=factor(plus(sum,planning),validNumber(state.reserve)/100);
-  $('subtotal').textContent=range(sum);
+  return {quoteTotal,open,planning,reserve,grand:plus(plus(sum,planning),reserve),gaps};
+}
+function totals(){
+  const {quoteTotal,open,planning,reserve,grand,gaps}=calculateBudget();
+  for(const section of sections.values()){
+    section.total.textContent=range(section.rows.map(row=>amounts(row)).reduce(plus,[0,0]))+' CHF';
+    for(const row of section.rows)currentRows.get(row.id).textContent=range(amounts(row));
+  }
+  $('quoted-total').textContent=nf.format(quoteTotal)+' CHF';
+  $('open-total').textContent=range(open)+' CHF';
   $('planning-total').textContent=range(planning);
   $('reserve-total').textContent=range(reserve);
-  $('grand-total').textContent=range(plus(plus(sum,planning),reserve));
+  $('grand-total').textContent=range(grand);
+  $('cost-gaps').replaceChildren(...gaps.sort((a,b)=>b.width-a.width).slice(0,6).map(({row,values,width})=>{
+    const item=element('li'),button=element('button',row.name);
+    button.type='button';
+    button.append(element('small',range(values)+' CHF · Spanne '+nf.format(width)+' CHF'));
+    button.onclick=()=>{
+      const target=currentRows.get(row.id).closest('tr');
+      target.closest('details').open=true;
+      target.querySelector('td[data-label="Offerte total CHF"] input').focus();
+    };
+    item.append(button);
+    return item;
+  }));
+  $('cost-gaps-empty').hidden=gaps.length>0;
 }
 function save(message='Änderungen in diesem Browser gespeichert.'){
   try{localStorage.setItem(saveKey,JSON.stringify(state));$('save-status').textContent=message;}
@@ -371,10 +412,15 @@ function makeRow(row){
   const settings=rowSettings(row);
   const stored=row.variants?record(row):row;
   const label=element('label');
-  label.append(input('checkbox',settings.active,row.name+' einrechnen',v=>stored.active=v),' ');
+  const checked=input('checkbox',settings.active,row.name+' einrechnen',v=>stored.active=v);
+  const bundle=coveredBy(row.id);
+  checked.disabled=Boolean(bundle)||Boolean(row.covers);
+  label.append(checked,' ');
   if(row.variants)label.append(row.name);
   else label.append(input('text',row.name,'Bezeichnung Zusatzposition',v=>row.name=v));
   const heading=cell('',label);
+  if(bundle)heading.append(element('small','In Sammelofferte «'+bundle.name+'» enthalten.'));
+  if(row.covers)heading.append(element('small',row.covers.map(id=>rows.find(item=>item.id===id)?.name??id).join(' · ')));
   if(row.note)heading.append(element('small',row.note));
   if(row.reference){
     const a=element('a','Vergleichsquelle');
@@ -404,16 +450,25 @@ function makeRow(row){
   total.className='amount';
   currentRows.set(row.id,amount);
   const unit=row.variants?row.unit:input('text',row.unit,'Einheit der Zusatzposition',v=>row.unit=v);
-  tr.append(heading,cell('Ausführung',row.variants?option:element('span','Eigene Position')),
-    cell('Menge',row.id==='i-parquet'||questionnaireEffects.get(row.id)?.fromModel?element('span',row.id==='i-parquet'&&parquetArea===null?'–':nf.format(settings.quantity)):input('number',settings.quantity,row.name+' Menge',v=>stored.quantity=v)),
-    cell('Einheit',unit),
-    cell('CHF niedrig',input('number',settings.low,row.name+' Richtpreis niedrig',v=>setPrice('low',v))),
-    cell('CHF hoch',input('number',settings.high,row.name+' Richtpreis hoch',v=>setPrice('high',v))),
-    cell('Offerte total CHF',input('number',settings.quote,row.name+' Offerte total CHF',v=>setPrice('quote',v),true)),total);
+  const quoteInput=input('number',settings.quote,row.name+' Offerte total CHF',v=>setPrice('quote',v),!row.covers);
+  if(row.covers)quoteInput.addEventListener('blur',()=>{if(quoteInput.value==='')quoteInput.value=row.quote;});
+  tr.append(heading,cell('Ausführung',row.variants?option:element('span',row.covers?'Sammelofferte':'Eigene Position')),
+    cell('Menge',row.covers||row.id==='i-parquet'||questionnaireEffects.get(row.id)?.fromModel?element('span',row.id==='i-parquet'&&parquetArea===null?'–':nf.format(settings.quantity)):input('number',settings.quantity,row.name+' Menge',v=>stored.quantity=v)),
+    cell('Einheit',row.covers?row.unit:unit),
+    cell('CHF niedrig',row.covers?'–':input('number',settings.low,row.name+' Richtpreis niedrig',v=>setPrice('low',v))),
+    cell('CHF hoch',row.covers?'–':input('number',settings.high,row.name+' Richtpreis hoch',v=>setPrice('high',v))),
+    cell('Offerte total CHF',quoteInput),total);
   if(!row.variants){
     const remove=element('button','Entfernen');
     remove.type='button';remove.className='remove';
-    remove.onclick=()=>{state.custom=state.custom.filter(item=>item.id!==row.id);render();save();};
+    remove.onclick=()=>{
+      if(row.covers){
+        state.bundles=state.bundles.filter(item=>item.id!==row.id);
+        questionnaireEffects=calculateQuestionnaire();
+        updatePaintQuestion();
+      }else state.custom=state.custom.filter(item=>item.id!==row.id);
+      render();save();
+    };
     tr.append(cell('',remove));
   }
   return tr;
@@ -430,7 +485,7 @@ function render(){
     const summary=element('summary');
     const total=element('output');
     summary.append(element('h2',name),total);details.append(summary);
-    const current=rows.filter(row=>row.category===id).concat(id==='extras'?state.custom:[]);
+    const current=rows.filter(row=>row.category===id).concat(state.bundles.filter(offer=>offer.category===id),id==='extras'?state.custom:[]);
     sections.set(id,{rows:current,total});
     const wrapper=element('div');
     wrapper.className='table-scroll';
@@ -452,10 +507,52 @@ function render(){
       };
       const form=element('div');form.className='actions';form.append(add);details.append(form);
     }
+    if(id!=='extras'){
+      const addOffer=element('button','Sammelofferte erfassen');
+      addOffer.type='button';
+      addOffer.onclick=()=>openBundleDialog(id,name);
+      const actions=element('div');actions.className='actions';actions.append(addOffer);details.append(actions);
+    }
     $('categories').append(details);
   }
   totals();
 }
+
+const bundleDialog=$('bundle-dialog');
+const bundleForm=$('bundle-form');
+let bundleCategory;
+function openBundleDialog(id,name){
+  bundleCategory=id;
+  bundleForm.reset();
+  $('bundle-heading').textContent='Sammelofferte · '+name;
+  $('bundle-status').textContent='';
+  $('bundle-positions').replaceChildren(...rows.filter(row=>row.category===id&&!coveredBy(row.id)).map(row=>{
+    const label=element('label');
+    const checkbox=element('input');
+    checkbox.type='checkbox';checkbox.name='covered';checkbox.value=row.id;
+    label.append(checkbox,' '+row.name);
+    return label;
+  }));
+  bundleDialog.showModal();
+}
+$('bundle-cancel').onclick=()=>bundleDialog.close();
+bundleForm.onsubmit=event=>{
+  event.preventDefault();
+  const data=new FormData(bundleForm);
+  const covers=data.getAll('covered').filter(id=>!coveredBy(id));
+  const name=data.get('name').trim();
+  if(!covers.length||!name){
+    $('bundle-status').textContent='Gib eine Bezeichnung ein und wähle die enthaltenen Positionen.';
+    return;
+  }
+  state.bundles.push({id:'bundle-'+crypto.randomUUID(),category:bundleCategory,covers,
+    name,quantity:1,unit:'Pausch.',low:0,high:0,active:true,quote:validNumber(data.get('quote'))});
+  openSections.add(bundleCategory);
+  bundleDialog.close();
+  questionnaireEffects=calculateQuestionnaire();
+  updatePaintQuestion();
+  render();save();
+};
 
 const questionFields=$('questionnaire-fields');
 for(const [key,label,options] of questions){
@@ -468,7 +565,7 @@ for(const [key,label,options] of questions){
   }else{
     field.type='number';
     field.min='0';
-    field.step=key==='spotCount'?'1':'0.01';
+    field.step=['spotCount','builtinsCount'].includes(key)?'1':'0.01';
     field.placeholder='Noch offen';
     field.value=queryAnswers()[key]??'';
   }
@@ -533,18 +630,15 @@ $('export').onclick=()=>{
     if(typeof v==='string'&&/^[=+@\-\t\r\n]/.test(text))text="'"+text;
     return '"'+text.replaceAll('"','""')+'"';
   };
-  const csv=[['Bereich','Position','Ausführung','Aktiv','Menge','Einheit','CHF niedrig','CHF hoch','Offerte total CHF','Total niedrig','Total hoch']];
+  const csv=[['Bereich','Position','Ausführung','Aktiv','Menge','Einheit','CHF niedrig','CHF hoch','Offerte total CHF','Total niedrig','Total hoch','Enthalten in']];
   for(const [id,label] of categories){
     for(const row of sections.get(id).rows){
       const s=rowSettings(row);
-      csv.push([label,row.name,row.variants?.[s.variant]?.label??'',s.active?'Ja':'Nein',s.quantity,s.unit,s.low,s.high,s.quote??'',...amounts(row)]);
+      csv.push([label,row.name,row.variants?.[s.variant]?.label??'',s.active?'Ja':'Nein',s.quantity,s.unit,s.low,s.high,s.quote??'',...amounts(row),coveredBy(row.id)?.name??'']);
     }
   }
-  const sum=[...sections.values()].flatMap(s=>s.rows).map(amounts).reduce(plus,[0,0]);
-  const basis=rows.filter(row=>!['furniture','extras'].includes(row.category)).map(amounts).reduce(plus,[0,0]);
-  const planning=factor(basis,validNumber(state.planning)/100);
-  const reserve=factor(plus(sum,planning),validNumber(state.reserve)/100);
-  for(const [name,values] of [['Planung',planning],['Reserve',reserve],['Gesamtbudget',plus(plus(sum,planning),reserve)]])
+  const {quoteTotal,open,planning,reserve,grand}=calculateBudget();
+  for(const [name,values] of [['Offertierte Beträge',[quoteTotal,quoteTotal]],['Offene Richtwerte',open],['Planung',planning],['Reserve',reserve],['Gesamtbudget',grand]])
     csv.push(['',name,'','','','','','','',...values.map(value=>Math.round(value*100)/100)]);
   const file=new Blob(['\ufeff',csv.map(row=>row.map(escape).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(file);
