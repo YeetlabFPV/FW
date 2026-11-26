@@ -42,7 +42,7 @@ button[aria-pressed="true"]{background:#38584b;color:white}
 .placement-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px}
 .placement-controls select{max-width:100%;font:inherit;padding:5px;border:1px solid #cad6cb;border-radius:6px}
 .placement-controls small{color:#456052}
-canvas.placing{cursor:move}
+canvas.placing,canvas.panning{cursor:move}
 #dimensions .placement-outline{fill:#38584b20;stroke:#31584b;stroke-width:2;stroke-dasharray:5 3}
 .stage{position:relative}
 #dimensions{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
@@ -69,7 +69,7 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
   <button data-view="Wohnung">Wohnung</button><button data-view="Küche">Küche</button><button data-view="Wohnen">Wohnen</button><button data-view="Bad">Bad</button><button data-view="Zimmer Eingang">Zimmer Eingang</button><button data-view="Schlafzimmer 1">Schlafzimmer 1</button><button data-view="Schlafzimmer 2">Schlafzimmer 2</button>
  </div>
  <div class="toolbar-group view-toolbar" role="group" aria-label="Ansicht"><strong>Ansicht</strong>
-  <button data-view="Draufsicht">Draufsicht</button><button id="walls" aria-pressed="true">Wände kürzen</button><button id="doors" aria-pressed="false">Türblätter</button><button id="door-frames" aria-pressed="true">Türrahmen</button><button id="windows" aria-pressed="true">Fenster</button><button id="full">Vollbild</button>
+  <button data-view="Draufsicht">Draufsicht</button><button id="walls" aria-pressed="true">Wände kürzen</button><button id="doors" aria-pressed="false">Türblätter</button><button id="door-frames" aria-pressed="true">Türrahmen</button><button id="windows" aria-pressed="true">Fenster</button><button type="button" id="pan-view" aria-pressed="false">Ansicht verschieben</button><button type="button" id="center-view" hidden>Zentrieren</button><button id="full">Vollbild</button>
  </div>
  <div class="toolbar-group" role="group" aria-label="Planung"><strong>Planung</strong>
   <button data-view="Küchenmasse">Küchenmasse</button><button id="placement" aria-pressed="false">Möbel platzieren</button>
@@ -89,7 +89,7 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
  </div>
  <small id="placement-message" role="status">Möbel auswählen und in der Draufsicht ziehen.</small>
 </div>
-<div class="stage"><canvas tabindex="0" aria-label="3D-Modell. Mit Pfeiltasten drehen, mit Plus und Minus zoomen."></canvas><svg id="dimensions" role="img" aria-label="Wandabstände in Zentimetern"></svg></div>
+<div class="stage"><canvas tabindex="0" aria-label="3D-Modell. Mit Pfeiltasten drehen, mit Plus und Minus zoomen. Mit Umschalt und Pfeiltasten die Ansicht verschieben."></canvas><svg id="dimensions" role="img" aria-label="Wandabstände in Zentimetern"></svg></div>
 <footer id="status">Ziehen zum Drehen · Scrollen zum Zoomen</footer>
 </section>
 <aside>
@@ -144,7 +144,7 @@ const program=gl.createProgram();
 for(const [type,source] of [[gl.VERTEX_SHADER,`
  attribute vec3 point; attribute vec4 material;
  uniform vec3 center,right,up,front;
- uniform vec2 scale;
+ uniform vec2 scale,viewOffset;
  uniform bool perspective;
  varying vec3 shade;
  varying vec2 floorPosition;
@@ -155,6 +155,7 @@ for(const [type,source] of [[gl.VERTEX_SHADER,`
    float depth=dot(p,front);
    if(perspective)gl_Position=vec4(dot(p,right)*scale.x,dot(p,up)*scale.y,depth*1.004-.051,depth);
    else gl_Position=vec4(dot(p,right)*scale.x,dot(p,up)*scale.y,-depth*.045,1.);
+   gl_Position.xy+=viewOffset*gl_Position.w;
    world=point; shade=material.rgb; floorPosition=material.a>1.5&&material.a<2.5?point.xy:point.yx; isOak=material.a;
  }`],[gl.FRAGMENT_SHADER,`
  ${derivatives?'#extension GL_OES_standard_derivatives : enable':''}
@@ -394,7 +395,7 @@ for(const [i,name] of ['point','material'].entries()){
  gl.enableVertexAttribArray(slot);
  gl.vertexAttribPointer(slot,i===0?3:4,gl.FLOAT,false,28,12*i);
 }
-const uniforms=Object.fromEntries(['center','right','up','front','scale', 'perspective','landscape','hasLandscape','woodAtlas','hasWood'].map(name=>[name,gl.getUniformLocation(program,name)]));
+const uniforms=Object.fromEntries(['center','right','up','front','scale','viewOffset', 'perspective','landscape','hasLandscape','woodAtlas','hasWood'].map(name=>[name,gl.getUniformLocation(program,name)]));
 if(walking){
  const picture=new Image();
  picture.onload=()=>{
@@ -1323,6 +1324,29 @@ function build(){
  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data.concat(glass)),gl.STATIC_DRAW);
 }
 const dimensions=document.querySelector('#dimensions');
+const panButton=document.querySelector('#pan-view');
+const centerButton=document.querySelector('#center-view');
+let panMode=false,viewX=0,viewY=0;
+function setPanMode(active){
+ panMode=active;
+ panButton.setAttribute('aria-pressed',active);
+ canvas.classList.toggle('panning',active);
+ document.querySelector('#status').textContent=active
+   ?'Ziehen zum Verschieben · Scrollen zum Zoomen'
+   :'Ziehen zum Drehen · Scrollen zum Zoomen';
+}
+function setViewOffset(x,y){
+ const clamp=(pixel,size)=>Math.max(-size,Math.min(size,pixel));
+ viewX=clamp(x,canvas.clientWidth);
+ viewY=clamp(y,canvas.clientHeight);
+ centerButton.hidden=viewX===0&&viewY===0;
+}
+panButton?.addEventListener('click',()=>setPanMode(!panMode));
+centerButton?.addEventListener('click',()=>{
+ setViewOffset(0,0);
+ panButton.focus();
+ draw();
+});
 const fullscreenButton=document.querySelector('#full');
 fullscreenButton.addEventListener('click',async()=>{
  const section=canvas.closest(walking?'main':'section');
@@ -1331,20 +1355,19 @@ fullscreenButton.addEventListener('click',async()=>{
 });
 function drawDimensions(width,height){
  dimensions.innerHTML='';
+ const scale=Math.min(width,height)/span;
+ const project=(x,y)=>[width/2+viewX+(x-center[0])*scale,height/2+viewY+(y-center[1])*scale];
  if(placingFurniture&&placementItem.value){
    dimensions.setAttribute('viewBox',`0 0 ${width} ${height}`);
-   const scale=Math.min(width,height)/span;
    const points=furnitureCorners(furnitureBounds(placementItem.value),furniturePositions[placementItem.value]??defaultPosition);
    const polygon=document.createElementNS('http://www.w3.org/2000/svg','polygon');
    polygon.setAttribute('class','placement-outline');
-   polygon.setAttribute('points',points.map(([x,y])=>[width/2+(x-center[0])*scale,height/2+(y-center[1])*scale].join(',')).join(' '));
+   polygon.setAttribute('points',points.map(([x,y])=>project(x,y).join(',')).join(' '));
    dimensions.append(polygon);
    return;
  }
  if(selected!=='Küchenmasse')return;
  dimensions.setAttribute('viewBox',`0 0 ${width} ${height}`);
- const scale=Math.min(width,height)/span;
- const project=(x,y)=>[width/2+(x-center[0])*scale,height/2+(y-center[1])*scale];
  const line=(x1,y1,x2,y2)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
  const measure=(x1,y1,x2,y2,label,offsetX=0,offsetY=-9)=>{
    const [a,b]=project(x1,y1),[c,d]=project(x2,y2);
@@ -1379,6 +1402,8 @@ function draw(){
  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
  gl.uniform1i?.(uniforms.perspective,Number(walking));
  const c=Math.cos(angle),s=Math.sin(angle),e=Math.cos(elevation),v=Math.sin(elevation);
+ if(!walking)setViewOffset(viewX,viewY);
+ gl.uniform2f(uniforms.viewOffset,walking?0:2*viewX/canvas.clientWidth,walking?0:-2*viewY/canvas.clientHeight);
  if(walking){
    const limit=Math.tan(fieldOfView/2);
    gl.uniform3fv(uniforms.center,center);
@@ -1412,6 +1437,7 @@ function draw(){
 const buttons=[...document.querySelectorAll('[data-view]')];
 function select(name){
  if(placingFurniture&&name!=='Draufsicht')setPlacementMode(false);
+ if(selected!==name)setViewOffset(0,0);
  selected=name;
  const [x,y,z,el,a,size,min,max]=views[name];
  center=[x,y,z]; elevation=el; angle=a; span=size; near=min; far=max;
@@ -1772,6 +1798,7 @@ function setPlacementMode(active){
  placementControls.hidden=!active;
  canvas.classList.toggle('placing',active);
  if(active){
+   if(panMode)setPanMode(false);
    if(Object.hasOwn(placementRooms,selected))placementRoom.value=selected;
    select('Draufsicht');
  }else{
@@ -1906,7 +1933,7 @@ document.querySelector('#placement-reset').onclick=()=>{
 };
 function furniturePoint(e){
  const r=canvas.getBoundingClientRect(),scale=Math.min(r.width,r.height)/span;
- return [center[0]+(e.clientX-r.left-r.width/2)/scale,center[1]+(e.clientY-r.top-r.height/2)/scale];
+ return [center[0]+(e.clientX-r.left-r.width/2-viewX)/scale,center[1]+(e.clientY-r.top-r.height/2-viewY)/scale];
 }
 function pickFurniture(x,y){
  for(const id of [placementItem.value,...furnitureGroups.keys()]){
@@ -1919,7 +1946,9 @@ function pickFurniture(x,y){
 }
 let last;
 canvas.addEventListener('pointerdown',e=>{
- if(placingFurniture){
+ if(!e.isPrimary||e.button!==0)return;
+ const panning=!walking&&(panMode||e.shiftKey);
+ if(placingFurniture&&!panning){
    const point=furniturePoint(e),id=pickFurniture(...point);
    if(!id)return;
    placementItem.value=id;
@@ -1928,9 +1957,17 @@ canvas.addEventListener('pointerdown',e=>{
    draw();
    return;
  }
- canvas.setPointerCapture(e.pointerId);last=[e.clientX,e.clientY];
+ canvas.setPointerCapture(e.pointerId);
+ last={id:e.pointerId,x:e.clientX,y:e.clientY,panning};
 });
 canvas.addEventListener('pointermove',e=>{
+ if(!e.isPrimary)return;
+ if(last?.id===e.pointerId&&last.panning){
+   setViewOffset(viewX+e.clientX-last.x,viewY+e.clientY-last.y);
+   last.x=e.clientX;last.y=e.clientY;
+   draw();
+   return;
+ }
  if(placingFurniture){
    if(!dragFurniture)return;
    const {id,point,position}=dragFurniture;
@@ -1947,11 +1984,15 @@ canvas.addEventListener('pointermove',e=>{
    return;
  }
  if(!last||selected==='Küchenmasse')return;
- angle-=(e.clientX-last[0])*.009;
- elevation=Math.max(walking?-1.55:.12,Math.min(1.55,elevation+(e.clientY-last[1])*.009));
- last=[e.clientX,e.clientY];draw();
+ angle-=(e.clientX-last.x)*.009;
+ elevation=Math.max(walking?-1.55:.12,Math.min(1.55,elevation+(e.clientY-last.y)*.009));
+ last.x=e.clientX;last.y=e.clientY;draw();
 });
-for(const name of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(name,()=>{last=null;if(dragFurniture){dragFurniture=null;saveFurniturePositions();}});
+for(const name of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(name,e=>{
+ if(!e.isPrimary)return;
+ last=null;
+ if(dragFurniture){dragFurniture=null;saveFurniturePositions();}
+});
 function zoom(factor){
  if(walking)fieldOfView=Math.min(1.93,Math.max(.40,fieldOfView*factor));
  else span=Math.min(24,Math.max(1.5,span*factor));
@@ -1959,6 +2000,15 @@ function zoom(factor){
 }
 canvas.addEventListener('wheel',e=>{e.preventDefault();zoom(Math.exp(Math.sign(e.deltaY)*.12));},{passive:false});
 canvas.addEventListener('keydown',e=>{
+ if(!walking&&e.shiftKey&&e.key.startsWith('Arrow')){
+   const step=32;
+   const dx=e.key==='ArrowLeft'?-step:e.key==='ArrowRight'?step:0;
+   const dy=e.key==='ArrowUp'?-step:e.key==='ArrowDown'?step:0;
+   setViewOffset(viewX+dx,viewY+dy);
+   e.preventDefault();
+   draw();
+   return;
+ }
  if((selected==='Küchenmasse'||placingFurniture)&&e.key.startsWith('Arrow'))return;
  switch(e.key){
  case '+':zoom(.88);break;
