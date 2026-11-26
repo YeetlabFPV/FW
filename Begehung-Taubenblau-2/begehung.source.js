@@ -92,9 +92,7 @@ function look(dx,dy){
 }
 const query=new URLSearchParams(location.search);
 const requested=query.get('raum');
-const previousScenes=new Set(['taubenblau','rekonstruiert','flieder']);
-const variant=previousScenes.has(query.get('variante'))?query.get('variante'):'taubenblau-2';
-document.querySelector('#blender-render').hidden=variant!=='taubenblau-2';
+const variant='taubenblau-2';
 const returnLink=document.querySelector('#pano-return');
 let panoramaRoom=requested??'kueche';
 function updateReturnLink(){
@@ -118,10 +116,8 @@ renderer.setAnimationLoop(time=>{
   renderer.render(scene,camera);
 });
 async function loadScene(loader){
-  if(location.port==='8768'&&variant==='taubenblau-2')return loader.loadAsync('Taubenblau-2.glb');
-  const paths=variant==='taubenblau-2'
-    ?['aa','ab','ac','ad','ae','af','ag'].map(name=>'szene.glb.gz.'+name)
-    :['varianten/'+variant+'.glb.gz'];
+  if(location.port==='8768')return loader.loadAsync('Taubenblau-2.glb');
+  const paths=['aa','ab','ac','ad','ae','af','ag'].map(name=>'szene.glb.gz.'+name);
   const parts=await Promise.all(paths.map(async path=>{
     const response=await fetch(path);
     if(!response.ok)throw Error('Szenendatei konnte nicht geladen werden.');
@@ -135,25 +131,13 @@ async function load(){
   const loader=new GLTFLoader();
   const [gltf,configuration,panorama]=await Promise.all([
     loadScene(loader),
-    fetch(variant==='taubenblau-2'?'Begehung-Daten.json':'varianten/'+variant+'.json').then(response=>{
+    fetch('Begehung-Daten.json').then(response=>{
       if(!response.ok)throw Error('Grundriss konnte nicht geladen werden.');
       return response.json();
     }),
     new THREE.TextureLoader().loadAsync(location.port==='8768'?'Alpen-Ausblick.jpg':'../Alpen-Ausblick.jpg')
   ]);
-  walls=configuration.wallCoordinates==='plan'?configuration.walls:configuration.walls.map(([x1,y1,x2,y2])=>[x1,-y2,x2,-y1]);
-  if(configuration.reflect)gltf.scene.scale.z=-1;
-  if(configuration.starts){
-    for(const [slug,room] of Object.entries(roomBySlug)){
-      if(slug==='essen'||!configuration.starts[slug])continue;
-      starts[room].splice(0,2,...configuration.starts[slug]);
-    }
-    enter(Object.hasOwn(roomBySlug,requested)?roomBySlug[requested]:'Küche');
-    if(requested==='essen'&&configuration.starts.essen){
-      const [x,z]=configuration.starts.essen;
-      camera.position.set(x,1.58,z);
-    }
-  }
+  walls=configuration.walls.map(([x1,y1,x2,y2])=>[x1,-y2,x2,-y1]);
   document.querySelector('#title').textContent='Blender-Begehung · '+configuration.name;
   document.title=document.querySelector('#title').textContent;
   gltf.scene.traverse(object=>{
