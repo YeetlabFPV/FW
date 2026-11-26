@@ -53,12 +53,12 @@ main.expanded{position:fixed;inset:0;z-index:10;width:100vw}
 <footer id="hint">Markierungen anklicken, um weiterzugehen · Ziehen zum Umschauen · Scrollen zum Zoomen</footer>
 </main>
 <script>
-const images={"wohn-holz-schiefer":"cycles-4k-wohn-holz-schiefer.jpg","wohn-holz-parkett":"cycles-hd-wohn-holz-parkett.jpg","wohn-weiss-schiefer":"cycles-hd-wohn-weiss-schiefer.jpg","wohn-weiss-parkett":"cycles-hd-wohn-weiss-parkett.jpg","essen-holz-schiefer":"cycles-hd-essen-holz-schiefer.jpg","essen-holz-parkett":"cycles-hd-essen-holz-parkett.jpg","essen-weiss-schiefer":"cycles-hd-essen-weiss-schiefer.jpg","essen-weiss-parkett":"cycles-hd-essen-weiss-parkett.jpg","kueche-holz-schiefer":"cycles-hd-kueche-holz-schiefer.jpg","kueche-holz-parkett":"cycles-hd-kueche-holz-parkett.jpg","kueche-weiss-schiefer":"cycles-hd-kueche-weiss-schiefer.jpg","kueche-weiss-parkett":"cycles-hd-kueche-weiss-parkett.jpg","flur-holz-schiefer":"cycles-hd-flur-holz-schiefer.jpg","flur-holz-parkett":"cycles-hd-flur-holz-parkett.jpg","flur-weiss-schiefer":"cycles-hd-flur-weiss-schiefer.jpg","flur-weiss-parkett":"cycles-hd-flur-weiss-parkett.jpg","bad-holz-parkett":"cycles-hd-bad-holz-parkett.jpg","bad-holz-bestand":"cycles-hd-bad-holz-bestand.jpg","bad-holz-schiefer":"cycles-hd-bad-holz-parkett.jpg","bad-weiss-parkett":"cycles-hd-bad-weiss-parkett.jpg","bad-weiss-bestand":"cycles-hd-bad-weiss-bestand.jpg","bad-weiss-schiefer":"cycles-hd-bad-weiss-parkett.jpg"};
-const currentImages={"wohn-holz-schiefer":true};
+const images={"wohn-holz-schiefer":"cycles-4k-wohn-holz-schiefer.jpg","wohn-holz-parkett":"cycles-hd-wohn-holz-parkett.jpg","wohn-weiss-schiefer":"cycles-hd-wohn-weiss-schiefer.jpg","wohn-weiss-parkett":"cycles-hd-wohn-weiss-parkett.jpg","essen-holz-schiefer":"cycles-4k-essen-holz-schiefer.jpg","essen-holz-parkett":"cycles-hd-essen-holz-parkett.jpg","essen-weiss-schiefer":"cycles-hd-essen-weiss-schiefer.jpg","essen-weiss-parkett":"cycles-hd-essen-weiss-parkett.jpg","kueche-holz-schiefer":"cycles-4k-kueche-holz-schiefer.jpg","kueche-holz-parkett":"cycles-hd-kueche-holz-parkett.jpg","kueche-weiss-schiefer":"cycles-hd-kueche-weiss-schiefer.jpg","kueche-weiss-parkett":"cycles-hd-kueche-weiss-parkett.jpg","flur-holz-schiefer":"cycles-4k-flur-holz-schiefer.jpg","flur-holz-parkett":"cycles-hd-flur-holz-parkett.jpg","flur-weiss-schiefer":"cycles-hd-flur-weiss-schiefer.jpg","flur-weiss-parkett":"cycles-hd-flur-weiss-parkett.jpg","bad-holz-parkett":"cycles-hd-bad-holz-parkett.jpg","bad-holz-bestand":"cycles-hd-bad-holz-bestand.jpg","bad-holz-schiefer":"cycles-hd-bad-holz-parkett.jpg","bad-weiss-parkett":"cycles-hd-bad-weiss-parkett.jpg","bad-weiss-bestand":"cycles-hd-bad-weiss-bestand.jpg","bad-weiss-schiefer":"cycles-hd-bad-weiss-parkett.jpg"};
+const currentImages={"wohn-holz-schiefer":true,"essen-holz-schiefer":true,"kueche-holz-schiefer":true,"flur-holz-schiefer":true};
 const main=document.querySelector('main'),canvas=document.querySelector('canvas');
 const fallback=document.querySelector('.fallback');
 const gl=canvas.getContext('webgl',{alpha:false,antialias:false});
-const starts={wohn:[-1.01,-.13],essen:[-2.30,-.13],kueche:[3.11,-.21],flur:[-1.44,-.11],bad:[.49,-.39]};
+const starts={wohn:[-1.01,-.13],essen:[-2.30,-.13],kueche:[3.11,-.21],flur:[-.32,-.24],bad:[.49,-.39]};
 const positions={wohn:[5.42,6.20],essen:[7.78,4.80],kueche:[7.92,2.92],flur:[4.84,2.85],bad:[5.69,.77]};
 const routes={
  wohn:[['essen',7.53,4.85,.79],['flur',4.86,4.20,.83]],
@@ -126,11 +126,14 @@ function select(next,material,heading){
  if(moved||!markers.length)makeMarkers();
  for(const {button} of markers)button.hidden=true;
  finish=material;
+ const bathPair=['parkett','bestand'].every(b=>currentImages['bad-'+finish+'-'+b]);
+ if(!bathPair&&bathFloor==='bestand')bathFloor='neu';
+ document.querySelector('[data-bathfloor="bestand"]').textContent=bathPair?'Bad Bestand':'Bestandsboden live';
  document.querySelectorAll('[data-room]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.room===room));
  document.querySelectorAll('[data-finish]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.finish===finish));
  document.querySelectorAll('[data-floor]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.floor===floor));
  document.querySelectorAll('[data-bathfloor]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.bathfloor===bathFloor));
- document.querySelector('#live').href='Rundgang-Live.html?room='+room;
+ document.querySelector('#live').href='Rundgang-Live.html?room='+room+(room==='bad'?'&bath='+bathFloor:'');
  const key=room==='bad'&&bathFloor==='bestand'?'bad-'+finish+'-bestand':room+'-'+finish+'-'+floor;
  const url=images[key],current=++revision;
  const badge=document.querySelector('#render-state');
@@ -194,7 +197,14 @@ if(gl){
 document.querySelectorAll('[data-room]').forEach(b=>b.onclick=()=>select(b.dataset.room,finish));
 document.querySelectorAll('[data-finish]').forEach(b=>b.onclick=()=>select(room,b.dataset.finish));
 document.querySelectorAll('[data-floor]').forEach(b=>b.onclick=()=>{floor=b.dataset.floor;select(room,finish);});
-document.querySelectorAll('[data-bathfloor]').forEach(b=>b.onclick=()=>{bathFloor=b.dataset.bathfloor;select(room,finish);});
+document.querySelectorAll('[data-bathfloor]').forEach(b=>b.onclick=()=>{
+ if(b.dataset.bathfloor==='bestand'&&!['parkett','bestand'].every(b=>currentImages['bad-'+finish+'-'+b])){
+   location.href='Rundgang-Live.html?room=bad&bath=bestand';
+   return;
+ }
+ bathFloor=b.dataset.bathfloor;
+ select('bad',finish);
+});
 document.querySelector('#reset').onclick=reset;
 const expand=document.querySelector('#expand');
 function fullLabel(){

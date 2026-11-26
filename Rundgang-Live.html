@@ -202,7 +202,7 @@ const views={
  Bad:[6.87,.91,.44,1.27,.35,4.4,0,1.73],
  Draufsicht:[4.3,4.5,0,Math.PI/2,0,10.4,0,9]
 };
-const walkSettings={"wohn":[5.42,6.2,-1.01,-0.13],"essen":[7.78,4.8,-2.3,-0.13],"kueche":[7.92,2.92,3.11,-0.21],"flur":[4.84,2.85,-1.44,-0.11],"bad":[5.69,0.77,0.49,-0.39]};
+const walkSettings={"wohn":[5.42,6.2,-1.01,-0.13],"essen":[7.78,4.8,-2.3,-0.13],"kueche":[7.92,2.92,3.11,-0.21],"flur":[4.84,2.85,-0.32,-0.24],"bad":[5.69,0.77,0.49,-0.39]};
 const walkViews=typeof walkSettings==='undefined'?{}:walkSettings;
 const walkRooms=Object.keys(walkViews);
 const routes={
@@ -381,6 +381,10 @@ const choiceRoot=document.querySelector('#choices');
 const configKey='fw-raum-materialien';
 let preferences={};
 try{preferences=JSON.parse(window.localStorage.getItem(configKey))??{};}catch{}
+if(walking){
+ const bath=new URLSearchParams(location.search).get('bath');
+ if(bath==='bestand'||bath==='neu')preferences['bath-tile']=bath;
+}
 
 function chooser(id,label,values,initial,changed,description=''){
  const wrapper=document.createElement('label');wrapper.className='choice';wrapper.textContent=label;
