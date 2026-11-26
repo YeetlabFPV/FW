@@ -43,6 +43,7 @@ main.expanded{position:fixed;inset:0;z-index:10;width:100vw}
 <div class="group" aria-label="Decke"><button data-finish="holz">Holzdecke</button><button data-finish="weiss">Warmweisse Decke</button></div>
 <div class="group" aria-label="Küchenboden"><button data-floor="schiefer">Schiefer</button><button data-floor="linoleum">Linoleum</button></div>
 <label>Linoleumfarbe <select id="linoleum-color"><option value="b7b5a9">Warmgrau</option><option value="aab8a4">Salbei</option><option value="d6c9ae">Sand</option><option value="c9a69a">Terrakotta hell</option><option value="a9b9be">Taubenblau</option><option value="686c6b">Anthrazit</option></select></label>
+<div class="group" aria-label="Badboden"><button data-bathfloor="neu">Bad neu</button><button data-bathfloor="bestand">Bad Bestand</button></div>
 <div class="group actions"><a class="control" href="Kueche-Wohnen-3D.html">Zum 3D-Modell</a><button id="reset">Startblick</button><button id="expand" aria-pressed="false">Vollbild</button></div>
 </nav>
 <div class="stage">
@@ -53,7 +54,7 @@ main.expanded{position:fixed;inset:0;z-index:10;width:100vw}
 <footer id="hint">Markierungen anklicken, um weiterzugehen · Ziehen zum Umschauen · Scrollen zum Zoomen</footer>
 </main>
 <script>
-const images={"wohn-holz-schiefer":"pano-wohn-holz-schiefer.jpg","wohn-holz-linoleum":"pano-wohn-holz-linoleum.jpg","wohn-weiss-schiefer":"pano-wohn-weiss-schiefer.jpg","wohn-weiss-linoleum":"pano-wohn-weiss-linoleum.jpg","essen-holz-schiefer":"pano-essen-holz-schiefer.jpg","essen-holz-linoleum":"pano-essen-holz-linoleum.jpg","essen-weiss-schiefer":"pano-essen-weiss-schiefer.jpg","essen-weiss-linoleum":"pano-essen-weiss-linoleum.jpg","kueche-holz-schiefer":"pano-kueche-holz-schiefer.jpg","kueche-holz-linoleum":"pano-kueche-holz-linoleum.jpg","kueche-weiss-schiefer":"pano-kueche-weiss-schiefer.jpg","kueche-weiss-linoleum":"pano-kueche-weiss-linoleum.jpg","flur-holz-schiefer":"pano-flur-holz-schiefer.jpg","flur-holz-linoleum":"pano-flur-holz-linoleum.jpg","flur-weiss-schiefer":"pano-flur-weiss-schiefer.jpg","flur-weiss-linoleum":"pano-flur-weiss-linoleum.jpg","bad-holz-schiefer":"pano-bad-holz-schiefer.jpg","bad-holz-linoleum":"pano-bad-holz-linoleum.jpg","bad-weiss-schiefer":"pano-bad-weiss-schiefer.jpg","bad-weiss-linoleum":"pano-bad-weiss-linoleum.jpg"};
+const images={"wohn-holz-schiefer":"pano-wohn-holz-schiefer.jpg","wohn-holz-linoleum":"pano-wohn-holz-linoleum.jpg","wohn-weiss-schiefer":"pano-wohn-weiss-schiefer.jpg","wohn-weiss-linoleum":"pano-wohn-weiss-linoleum.jpg","essen-holz-schiefer":"pano-essen-holz-schiefer.jpg","essen-holz-linoleum":"pano-essen-holz-linoleum.jpg","essen-weiss-schiefer":"pano-essen-weiss-schiefer.jpg","essen-weiss-linoleum":"pano-essen-weiss-linoleum.jpg","kueche-holz-schiefer":"pano-kueche-holz-schiefer.jpg","kueche-holz-linoleum":"pano-kueche-holz-linoleum.jpg","kueche-weiss-schiefer":"pano-kueche-weiss-schiefer.jpg","kueche-weiss-linoleum":"pano-kueche-weiss-linoleum.jpg","flur-holz-schiefer":"pano-flur-holz-schiefer.jpg","flur-holz-linoleum":"pano-flur-holz-linoleum.jpg","flur-weiss-schiefer":"pano-flur-weiss-schiefer.jpg","flur-weiss-linoleum":"pano-flur-weiss-linoleum.jpg","bad-holz-schiefer":"pano-bad-holz-schiefer.jpg","bad-holz-linoleum":"pano-bad-holz-linoleum.jpg","bad-weiss-schiefer":"pano-bad-weiss-schiefer.jpg","bad-weiss-linoleum":"pano-bad-weiss-linoleum.jpg","bad-holz-bestand":"pano-bad-holz-bestand.jpg","bad-weiss-bestand":"pano-bad-weiss-bestand.jpg"};
 const masks={"wohn":"pano-wohn-linoleum-maske.jpg","essen":"pano-essen-linoleum-maske.jpg","kueche":"pano-kueche-linoleum-maske.jpg","flur":"pano-flur-linoleum-maske.jpg","bad":"pano-bad-linoleum-maske.jpg"};
 const main=document.querySelector('main'),canvas=document.querySelector('canvas');
 const fallback=document.querySelector('.fallback');
@@ -97,7 +98,7 @@ function projectMarkers(width,height,scale){
  }
 }
 const maxFov=1.93;
-let room='wohn',finish='holz',floor='schiefer',[yaw,pitch]=starts[room],fov=maxFov,texture,maskTexture,uniforms,last,revision=0;
+let room='wohn',finish='holz',floor='schiefer',bathFloor='neu',[yaw,pitch]=starts[room],fov=maxFov,texture,maskTexture,uniforms,last,revision=0;
 function draw(){
  if(!gl||!texture)return;
  const ratio=Math.min(window.devicePixelRatio||1,2);
@@ -132,8 +133,10 @@ function select(next,material,heading){
  document.querySelectorAll('[data-room]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.room===room));
  document.querySelectorAll('[data-finish]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.finish===finish));
  document.querySelectorAll('[data-floor]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.floor===floor));
+ document.querySelectorAll('[data-bathfloor]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.bathfloor===bathFloor));
  document.querySelector('#linoleum-color').disabled=floor!=='linoleum';
- const url=images[room+'-'+finish+'-'+floor],current=++revision;
+ const key=room==='bad'&&bathFloor==='bestand'?'bad-'+finish+'-bestand':room+'-'+finish+'-'+floor;
+ const url=images[key],current=++revision;
  if(!gl){fallback.src=url;return;}
  const pic=new Image();
  pic.onload=()=>{
@@ -211,6 +214,7 @@ if(gl){
 document.querySelectorAll('[data-room]').forEach(b=>b.onclick=()=>select(b.dataset.room,finish));
 document.querySelectorAll('[data-finish]').forEach(b=>b.onclick=()=>select(room,b.dataset.finish));
 document.querySelectorAll('[data-floor]').forEach(b=>b.onclick=()=>{floor=b.dataset.floor;select(room,finish);});
+document.querySelectorAll('[data-bathfloor]').forEach(b=>b.onclick=()=>{bathFloor=b.dataset.bathfloor;select(room,finish);});
 document.querySelector('#linoleum-color').onchange=draw;
 document.querySelector('#reset').onclick=reset;
 const expand=document.querySelector('#expand');
