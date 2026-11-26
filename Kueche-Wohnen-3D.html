@@ -19,6 +19,7 @@ nav{display:flex;flex-wrap:wrap;gap:6px;padding:10px}
 .toolbar-group{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
 .room-toolbar{width:100%}
 .view-toolbar{border-right:1px solid #e1e6de;padding-right:10px;margin-right:4px}
+.render-quality{display:inline-flex;align-items:center;gap:5px;font-size:13px}.render-quality select{font:inherit;color:inherit;border:1px solid #cad6cb;border-radius:8px;padding:6px;background:#f8faf6}
 .toolbar strong{font-size:12px;letter-spacing:.07em;text-transform:uppercase;margin-right:4px;color:#607468}
 .choices{display:grid;gap:12px;margin-bottom:16px}
 .choice-group{display:grid;gap:10px;min-width:0;margin:0;padding:8px 0 2px;border:0;border-top:1px solid #e1e6de}
@@ -56,8 +57,12 @@ section:fullscreen canvas{height:100%;min-height:0}
 main[data-mode="walk"] section{min-width:0}
 main[data-mode="walk"]:fullscreen{padding:12px;background:#f4f4ee}
 main[data-mode="walk"]:fullscreen canvas{height:calc(100dvh - 105px)}
-.walk-paths{position:absolute;inset:0;pointer-events:none}
-.walk-paths button{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;border-radius:2em;box-shadow:0 2px 11px #17291f54;background:#fbfcf7f2}
+.walk-controls{position:absolute;left:12px;bottom:12px;display:grid;grid-template-columns:repeat(3,44px);gap:4px}
+.walk-controls button{width:44px;height:44px;justify-content:center;font-size:19px;background:#f8faf6ed;touch-action:none;user-select:none}
+.walk-controls button:first-child{grid-column:2}.walk-controls button:nth-child(2){grid-column:1}
+.stage.walking canvas{cursor:crosshair}
+#leave-walk{position:absolute;right:12px;top:12px;background:#f8faf6ed}
+@media(max-width:780px){section:not(:fullscreen) .stage.walking canvas{height:70dvh;min-height:0}}
 footer{padding:8px 12px;font-size:13px;color:#4a5b51}
 @media(max-width:780px){main{grid-template-columns:1fr}body{padding:12px}aside{max-height:none}}
 </style>
@@ -69,7 +74,7 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
   <button data-view="Wohnung">Wohnung</button><button data-view="Küche">Küche</button><button data-view="Wohnen">Wohnen</button><button data-view="Bad">Bad</button><button data-view="Zimmer Eingang">Zimmer Eingang</button><button data-view="Schlafzimmer 1">Schlafzimmer 1</button><button data-view="Schlafzimmer 2">Schlafzimmer 2</button>
  </div>
  <div class="toolbar-group view-toolbar" role="group" aria-label="Ansicht"><strong>Ansicht</strong>
-  <button data-view="Draufsicht">Draufsicht</button><button id="walls" aria-pressed="true">Wände kürzen</button><button id="doors" aria-pressed="false">Türblätter</button><button id="door-frames" aria-pressed="true">Türrahmen</button><button id="windows" aria-pressed="true">Fenster</button><button type="button" id="pan-view" aria-pressed="false">Ansicht verschieben</button><button type="button" id="center-view" hidden>Zentrieren</button><button id="full">Vollbild</button>
+  <button type="button" id="walk-mode" aria-pressed="false">Wohnung begehen</button><button data-view="Draufsicht">Draufsicht</button><button id="walls" aria-pressed="true">Wände kürzen</button><button id="doors" aria-pressed="false">Türblätter</button><button id="door-frames" aria-pressed="true">Türrahmen</button><button id="windows" aria-pressed="true">Fenster</button><button type="button" id="pan-view" aria-pressed="false">Ansicht verschieben</button><button type="button" id="center-view" hidden>Zentrieren</button><button id="full">Vollbild</button><label class="render-quality">Grafik <select id="render-quality"><option value="auto">Automatisch</option><option value="high">Maximale Details</option></select></label>
  </div>
  <div class="toolbar-group" role="group" aria-label="Planung"><strong>Planung</strong>
   <button data-view="Küchenmasse">Küchenmasse</button><button id="placement" aria-pressed="false">Möbel platzieren</button>
@@ -89,7 +94,12 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
  </div>
  <small id="placement-message" role="status">Möbel auswählen und in der Draufsicht ziehen.</small>
 </div>
-<div class="stage"><canvas tabindex="0" aria-label="3D-Modell. Mit Pfeiltasten drehen, mit Plus und Minus zoomen. Mit Umschalt und Pfeiltasten die Ansicht verschieben."></canvas><svg id="dimensions" role="img" aria-label="Wandabstände in Zentimetern"></svg></div>
+<div class="stage"><canvas tabindex="0" aria-label="3D-Modell. Mit Pfeiltasten drehen, mit Plus und Minus zoomen. Mit Umschalt und Pfeiltasten die Ansicht verschieben."></canvas><svg id="dimensions" role="img" aria-label="Wandabstände in Zentimetern"></svg><button type="button" id="leave-walk" hidden>Rundgang verlassen</button><div class="walk-controls" id="walk-controls" role="group" aria-label="Gehrichtung" hidden>
+<button type="button" data-step="forward" aria-label="Vorwärts">↑</button>
+<button type="button" data-step="left" aria-label="Nach links">←</button>
+<button type="button" data-step="back" aria-label="Rückwärts">↓</button>
+<button type="button" data-step="right" aria-label="Nach rechts">→</button>
+</div></div>
 <footer id="status">Ziehen zum Drehen · Scrollen zum Zoomen</footer>
 </section>
 <aside>
@@ -134,12 +144,22 @@ function corners({x,y,z,w,d,h,pivot,angle}){
 },
 hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255)];
 const canvas=document.querySelector('canvas');
-const walking=document.querySelector('main').dataset?.mode==='walk';
+let walking=false;
+const qualitySelect=document.querySelector('#render-quality');
+const qualityKey='fw-grafikqualitaet';
+let highQuality=false;
+try{highQuality=localStorage.getItem(qualityKey)==='high';}catch{}
+qualitySelect.value=highQuality?'high':'auto';
+qualitySelect.addEventListener('change',()=>{
+ highQuality=qualitySelect.value==='high';
+ try{localStorage.setItem(qualityKey,qualitySelect.value);}catch{}
+});
 const gl=canvas.getContext('webgl',{antialias:true});
 if(!gl){
   document.querySelector('#status').textContent='Die 3D-Ansicht benötigt WebGL.';
 }else{
 const derivatives=gl.getExtension?.('OES_standard_derivatives');
+qualitySelect.addEventListener('change',()=>{build();draw();});
 const program=gl.createProgram();
 for(const [type,source] of [[gl.VERTEX_SHADER,`
  attribute vec3 point; attribute vec4 material;
@@ -317,8 +337,10 @@ for(const [type,source] of [[gl.VERTEX_SHADER,`
      return;
    }
    if(isOak>10.5){
-     vec2 weave=vec2(world.x+world.y,world.y+world.z)*640.;
-     grain+=.026*(noise(weave*.093)-.5)+.022*sin(weave.x)*sin(weave.y);
+     vec2 fabric=vec2(world.x+world.y,world.y+world.z);
+     vec2 weave=fabric*640.;
+     float threadFade=1.-smoothstep(.8,3.1,${derivatives?'max(fwidth(weave.x),fwidth(weave.y))':'.8'});
+     grain+=.055*(noise(fabric*24.)-.5)+threadFade*(.035*(noise(weave*.19)-.5)+.033*sin(weave.x)*sin(weave.y));
    }else if(isOak>9.5){
      vec2 p=world.xy;
      float mottling=noise(p*32.)*.57+noise(p*220.)*.43;
@@ -388,6 +410,7 @@ if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfo
 gl.useProgram(program);
 gl.enable(gl.DEPTH_TEST);
 gl.clearColor(.914,.933,.91,1);
+const renderBufferLimit=gl.getParameter(gl.MAX_RENDERBUFFER_SIZE);
 const buffer=gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
 for(const [i,name] of ['point','material'].entries()){
@@ -396,7 +419,10 @@ for(const [i,name] of ['point','material'].entries()){
  gl.vertexAttribPointer(slot,i===0?3:4,gl.FLOAT,false,28,12*i);
 }
 const uniforms=Object.fromEntries(['center','right','up','front','scale','viewOffset', 'perspective','landscape','hasLandscape','woodAtlas','hasWood'].map(name=>[name,gl.getUniformLocation(program,name)]));
-if(walking){
+let landscapeRequested=false;
+function loadWalkLandscape(){
+ if(landscapeRequested)return;
+ landscapeRequested=true;
  const picture=new Image();
  picture.onload=()=>{
    const texture=gl.createTexture();
@@ -443,18 +469,17 @@ const views={
  Bad:[6.87,.91,.44,1.27,.35,4.4,0,1.73],
  Draufsicht:[4.3,4.5,0,Math.PI/2,0,10.4,0,9]
 };
-/* WALK_SETTINGS */
-const walkViews=typeof walkSettings==='undefined'?{}:walkSettings;
-const walkRooms=Object.keys(walkViews);
-const routes={
- wohn:[['essen',7.53,4.85,.79],['flur',4.86,4.20,.83]],
- essen:[['wohn',5.53,6.19,.72],['kueche',7.93,3.97,.79]],
- kueche:[['essen',7.90,4.23,.78]],
- flur:[['wohn',4.86,4.24,.78],['bad',5.43,.60,.91]],
- bad:[['flur',5.35,.62,.81]]
+const walkStarts={
+ Wohnung:[4.74,.50,Math.PI/2],
+ Küche:[7.83,2.88,Math.PI],
+ Wohnen:[5.16,5.57,Math.PI/5],
+ Bad:[5.76,.57,.12],
+ 'Zimmer Eingang':[3.29,1.63,Math.PI],
+ 'Schlafzimmer 1':[3.29,3.54,Math.PI],
+ 'Schlafzimmer 2':[3.78,7.78,Math.PI]
 };
-let paths=[],glassCount=0;
-let ceiling='holz',walkRoom,fieldOfView=1.93;
+let glassCount=0,fieldOfView=1.15;
+let ceiling='holz';
 const tops={current:[null,10],terrazzo:['#d7cbbd',12],black:['#353539',13],white:['#eae8e3',14],oak:['#c5a17a',15],concrete:['#a8a5a0',16],travertine:['#ccb79a',17],marble:['#e5e1d9',18]};
 const floorTiles={rhomboid:20,cubes:21,terracotta:22};
 const showerTiles={blue:24,petrol:25,green:26,square:27};
@@ -805,6 +830,7 @@ function validateFurniturePositions(){
 }
 function build(){
  const data=[],glass=[];
+ const sink=model.find(piece=>piece.name==='Spuele');
  const activePlacements=new Map();
  for(const [id,position] of Object.entries(furniturePositions)){
    const bounds=furnitureBounds(id);
@@ -854,7 +880,8 @@ function build(){
    const core=half.map((h,axis)=>h-radius[axis]);
    const steps=half.map((h,axis)=>{
      const r=radius[axis];
-     return [-h,-h+r*.13,-h+r*.42,-h+r,h-r,h-r*.42,h-r*.13,h];
+     const offsets=highQuality?[0,.055,.16,.33,.54,.76,1]:[0,.13,.42,1];
+     return [...offsets.map(f=>-h+r*f),...offsets.map((_,index)=>h-r*offsets[offsets.length-1-index])];
    });
    for(let axis=0;axis<3;axis++)for(const sign of [-1,1]){
      const u=(axis+1)%3,v=(axis+2)%3;
@@ -987,7 +1014,7 @@ function build(){
      strut(at(feet[i],starts[i],.28),at(feet[j],starts[j],.89),.0038,6,wire);
      strut(at(feet[j],starts[j],.28),at(feet[i],starts[i],.89),.0038,6,wire);
    }
-   const rows=16,columns=20,shellColor=rgb('#24282a');
+   const rows=highQuality?28:16,columns=highQuality?32:20,shellColor=rgb('#24282a');
    function shellPoint(u,t){
      const back=Math.max(0,(t-.52)/.48);
      const sides=Math.pow(Math.abs(u),5);
@@ -1051,6 +1078,38 @@ function build(){
    for(let i=0;i<24;i++){
      const rim=t=>[drain[0]+.012*Math.cos(t*Math.PI/12),drain[1]+.012*Math.sin(t*Math.PI/12),drain[2]];
      for(const point of [drain,rim(i),rim(i+1)])data.push(...point,.32,.36,.37,0);
+   }
+ }
+ function trimLoop(box,inset,corner,z,thickness,color){
+   const {x,y,w,d}=box;
+   const centers=[[x+w-inset-corner,y+d-inset-corner],[x+inset+corner,y+d-inset-corner],
+     [x+inset+corner,y+inset+corner],[x+w-inset-corner,y+inset+corner]];
+   const segments=highQuality?8:4;
+   const points=centers.flatMap(([cx,cy],index)=>Array.from({length:segments+1},(_,step)=>{
+     const angle=(index+step/segments)*Math.PI/2;
+     return [cx+corner*Math.cos(angle),cy+corner*Math.sin(angle),z];
+   }));
+   for(let i=0;i<points.length;i++)strut(points[i],points[(i+1)%points.length],thickness,6,color);
+ }
+ function showerMetal(box,color){
+   const {x,y,z,w,d,h}=box;
+   if(box.name.startsWith('Duschstange')){
+     strut([x+w/2,y+d/2,z],[x+w/2,y+d/2,z+h],.012,16,color);
+     for(const height of [z+.05,z+h-.03])strut([x+w/2,y+d/2,height],[x+w/2,y+d+.019,height],.016,12,color);
+   }else if(box.name.startsWith('Duschbrause')){
+     roundedBox(box,[.024,.026,.013],color,0);
+     for(let row=0;row<3;row++)for(let column=0;column<3;column++){
+       const px=x+w*(.26+column*.24),py=y+d*(.17+row*.19);
+       strut([px,py,z-.002],[px,py,z+.001],.0024,6,charcoal);
+     }
+   }else{
+     roundedBox(box,[.014,.018,.018],color,0);
+     for(const px of [x+.033,x+w-.033])strut([px,y+.02,z+h*.54],[px,y-.019,z+h*.54],.022,16,color);
+     const points=Array.from({length:25},(_,index)=>{
+       const t=index/24;
+       return [x+.105+.038*t+.025*Math.sin(Math.PI*t),y-.034-.073*Math.sin(Math.PI*t),z+(1-t)*.015+t*.80-.67*Math.sin(Math.PI*t)];
+     });
+     for(let i=1;i<points.length;i++)strut(points[i-1],points[i],.007,8,color);
    }
  }
  function drawPull(box,finish){
@@ -1164,10 +1223,10 @@ function build(){
    const doorFrame=b.name.includes('_Zarge_');
    const windowPart=b.name.includes('_Oeffnung_')&&(b.material==='Zarge'||b.material==='Glas');
    if((doorFrame&&!showDoorFrames)||(windowPart&&!showWindows))return;
-   if(b.door&&(!showDoors||selected==='Draufsicht'||selected==='Küchenmasse'||b.viewY<near||b.viewY>far||!b.name.endsWith('_Griffmulde')))return;
+   if(b.door&&(walking||!showDoors||selected==='Draufsicht'||selected==='Küchenmasse'||b.viewY<near||b.viewY>far||!b.name.endsWith('_Griffmulde')))return;
    const lo=b.door||placement?b.y:Math.max(b.y,near),hi=b.door||placement?b.y+b.d:Math.min(b.y+b.d,far);
    if(hi-lo<.0001)return;
-   const h=b.wall&&(cut||selected==='Küchenmasse')?Math.min(b.z+b.h,.27)-b.z:b.h;
+   const h=b.wall&&!walking&&(cut||selected==='Küchenmasse')?Math.min(b.z+b.h,.27)-b.z:b.h;
    if(h<=0)return;
    if(b.door){
      timberDoor(b);
@@ -1183,7 +1242,7 @@ function build(){
      return;
    }
    const vertices=corners({...b,y:lo,d:hi-lo,h});
-   if(b.material==='Glas' && b.name.endsWith('_Glas') && cut)return;
+   if(b.material==='Glas'&&b.name.endsWith('_Glas')&&cut&&!walking)return;
    const isGlass=b.name==='Duschglas';
    const isWindow=walking&&b.material==='Glas'&&b.name.endsWith('_Glas');
    const top=b.material==='Arbeitsstein'?tops[worktop]:null;
@@ -1199,8 +1258,57 @@ function build(){
      faucet(b,color);
      return;
    }
-   if(b.name==='Kochfeld'&&lo===b.y&&hi===b.y+b.d)cooktopRings(b);
+   if(b.name==='Kochfeld'&&lo===b.y&&hi===b.y+b.d){
+     cooktopRings(b);
+     for(let i=0;i<7;i++){
+       const x=b.x+b.w*(.50+i*.052),y=b.y+.028,z=b.z+b.h;
+       strut([x-.008,y,z],[x+.008,y,z],.0015,6,i===0?rgb('#bc7465'):rgb('#9b9a93'));
+     }
+   }
    if(lo===b.y&&hi===b.y+b.d){
+     if((b.name==='Halbinsel_Arbeitsplatte'||b.name==='Halbinsel_Korpus')&&!b.sinkCut){
+       if(b.name==='Halbinsel_Korpus'){
+         const recess=.82;
+         addObject({...b,h:recess-b.z,sinkCut:true},placement);
+         b={...b,z:recess,h:b.z+b.h-recess};
+       }
+       const right=b.x+b.w,back=b.y+b.d,sinkRight=sink.x+sink.w,sinkBack=sink.y+sink.d;
+       for(const [x,y,w,d] of [
+         [b.x,b.y,sink.x-b.x,b.d],[sinkRight,b.y,right-sinkRight,b.d],
+         [sink.x,b.y,sink.w,sink.y-b.y],[sink.x,sinkBack,sink.w,back-sinkBack]
+       ])addObject({...b,x,y,w,d,sinkCut:true},placement);
+       return;
+     }
+     if(b.name==='Spuele'){
+       washbasin({...b,z:b.z-.129,h:.142},rgb('#adb6b9'));
+       return;
+     }
+     if(b.name==='Spuelbecken')return;
+     if(b.name==='Wohnteppich'){
+       roundedBox(b,[.034,.034,.003],color,11);
+       trimLoop(b,.019,.026,b.z+b.h-.001,.0021,color.map(v=>v*.75));
+       return;
+     }
+     if(b.name==='Backofen_Glas'){
+       roundedBox(b,[.010,.0015,.009],rgb('#252a2d'),0);
+       return;
+     }
+     if(b.name==='Backofen_Front'){
+       const y=b.y-.002,z=b.z+b.h-.058,x=b.x+b.w/2;
+       for(const dx of [-.18,.18])strut([x+dx,y+.004,z],[x+dx,y-.014,z],.021,highQuality?24:14,rgb('#596065'));
+       roundedBox({x:x-.063,y:y-.007,z:z-.019,w:.126,d:.008,h:.038},[.005,.003,.005],rgb('#242b2d'),0);
+       roundedBox({x:x-.025,y:y-.009,z:z-.003,w:.050,d:.002,h:.006},[.002,.0008,.002],rgb('#a9bbaa'),0);
+     }
+     if(/^Dusch(?:anschluss|stange|brause)_/.test(b.name)){
+       showerMetal(b,rgb('#abb4b8'));
+       return;
+     }
+     if(b.name==='Rinnenabdeckung_bodenbuendig'){
+       for(let i=1;i<24;i++){
+         const x=b.x+b.w*i/24,z=b.z+b.h;
+         strut([x,b.y+.005,z],[x,b.y+b.d-.005,z],.0013,6,charcoal);
+       }
+     }
      if(builtinMiddles.has(b.name)){
        cupboardFront(b,color);
        return;
@@ -1247,6 +1355,7 @@ function build(){
      }
      if(Object.hasOwn(furnitureEdges,b.name)){
        roundedBox(b,furnitureEdges[b.name],color,b.material==='Holz'?8:b.material==='Textil'?11:0);
+       if(b.name==='Sofa_Sitzpolster')trimLoop(b,.036,.055,b.z+b.h-.017,.0023,color.map(v=>v*.68));
        return;
      }
    }
@@ -1349,7 +1458,7 @@ centerButton?.addEventListener('click',()=>{
 });
 const fullscreenButton=document.querySelector('#full');
 fullscreenButton.addEventListener('click',async()=>{
- const section=canvas.closest(walking?'main':'section');
+ const section=canvas.closest('section');
  if(document.fullscreenElement)await document.exitFullscreen();
  else if(section.requestFullscreen)await section.requestFullscreen();
 });
@@ -1394,7 +1503,10 @@ function drawGlass(){
  gl.disable(gl.BLEND);
 }
 function draw(){
- const ratio=Math.min(devicePixelRatio*1.35,2.5,Math.sqrt(5000000/Math.max(1,canvas.clientWidth*canvas.clientHeight)));
+ const area=Math.max(1,canvas.clientWidth*canvas.clientHeight);
+ const target=highQuality?Math.max(2.5,devicePixelRatio*1.7):devicePixelRatio*1.35;
+ const maxSize=renderBufferLimit/Math.max(1,canvas.clientWidth,canvas.clientHeight);
+ const ratio=Math.min(target,highQuality?3.5:2.5,Math.sqrt((highQuality?8300000:5000000)/area),maxSize);
  const width=Math.round(canvas.clientWidth*ratio),height=Math.round(canvas.clientHeight*ratio);
  if(!width||!height)return;
  if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;}
@@ -1407,21 +1519,12 @@ function draw(){
  if(walking){
    const limit=Math.tan(fieldOfView/2);
    gl.uniform3fv(uniforms.center,center);
-   gl.uniform3fv(uniforms.right,[-s,c,0]);
+   gl.uniform3fv(uniforms.right,[s,-c,0]);
    gl.uniform3fv(uniforms.up,[-c*v,-s*v,e]);
    gl.uniform3fv(uniforms.front,[c*e,s*e,v]);
-   gl.uniform2f(uniforms.scale,1/limit,width/(height*limit));
+   gl.uniform2f(uniforms.scale,height/(width*limit),1/limit);
    gl.drawArrays(gl.TRIANGLES,0,count);
    drawGlass();
-   for(const {marker,target:[x,y,z]} of paths){
-     const dx=x-center[0],dy=y-center[1],dz=z-center[2];
-     const depth=dx*c*e+dy*s*e+dz*v;
-     const u=(-dx*s+dy*c)/(depth*limit);
-     const t=(-dx*c*v-dy*s*v+dz*e)*width/(depth*limit*height);
-     marker.hidden=depth<=0||Math.abs(u)>.85||Math.abs(t)>.85;
-     marker.style.left=(50+50*u)+'%';
-     marker.style.top=(50-50*t)+'%';
-   }
    return;
  }
  gl.uniform3fv(uniforms.center,center);
@@ -1444,22 +1547,59 @@ function select(name){
  for(const b of buttons)b.setAttribute('aria-pressed',b.dataset.view===selected);
  build();draw();
 }
+const walkButton=document.querySelector('#walk-mode');
+const walkControls=document.querySelector('#walk-controls');
+const leaveWalkButton=document.querySelector('#leave-walk');
+const canvasHelp=canvas.getAttribute('aria-label');
+let returnView='Wohnung';
 function selectWalk(name){
- walkRoom=name;
- const [x,y,yaw,pitch]=walkViews[name];
- center=[x,y,1.48]; angle=yaw; elevation=pitch; fieldOfView=1.93; near=0; far=9;cut=false;
- for(const b of buttons)b.setAttribute('aria-pressed',b.dataset.view===name);
- paths=routes[name].map(([destination,...target])=>{
-   const marker=document.createElement('button');
-   marker.textContent='➜ '+buttons.find(b=>b.dataset.view===destination).textContent;
-   marker.onclick=()=>selectWalk(destination);
-   return {marker,target};
- });
- document.querySelector('.walk-paths').replaceChildren(...paths.map(path=>path.marker));
- document.querySelector('#cycles').href='Wohnen-und-Bad-360.html?room='+name;
+ selected=name;
+ const [x,y,yaw]=walkStarts[name];
+ center=[x,y,1.60];angle=yaw;elevation=-.07;fieldOfView=1.15;near=0;far=9;
+ for(const button of buttons)button.setAttribute('aria-pressed',button.dataset.view===name);
  build();draw();
 }
-buttons.forEach(b=>b.addEventListener('click',()=>walking?selectWalk(b.dataset.view):select(b.dataset.view)));
+function setWalking(active){
+ if(active){
+   if(Object.hasOwn(walkStarts,selected))returnView=selected;
+   if(placingFurniture)setPlacementMode(false);
+   if(panMode)setPanMode(false);
+   loadWalkLandscape();
+ }
+ walking=active;
+ stopWalking();
+ walkButton.setAttribute('aria-pressed',active);
+ walkButton.textContent=active?'Zur Modellansicht':'Wohnung begehen';
+ walkControls.hidden=leaveWalkButton.hidden=!active;
+ canvas.closest('.stage').classList.toggle('walking',active);
+ for(const id of ['pan-view','walls','doors','placement']){
+   document.getElementById(id).disabled=active;
+ }
+ centerButton.hidden=active||(!viewX&&!viewY);
+ dimensions.replaceChildren();
+ document.querySelector('#status').textContent=active
+   ?'WASD oder Pfeilbuttons zum Gehen · Ziehen zum Umschauen'
+   :'Ziehen zum Drehen · Scrollen zum Zoomen';
+ canvas.setAttribute('aria-label',active
+   ?'Begehbare Wohnung. WASD zum Gehen, Pfeiltasten zum Umschauen.'
+   :canvasHelp);
+ if(active){
+   selectWalk(returnView);
+   canvas.scrollIntoView({block:'start'});
+   canvas.focus({preventScroll:true});
+ }else{
+   select(returnView);
+   walkButton.focus();
+ }
+}
+walkButton.onclick=()=>setWalking(!walking);
+leaveWalkButton.onclick=()=>setWalking(false);
+buttons.forEach(button=>button.addEventListener('click',()=>{
+ const name=button.dataset.view;
+ if(walking&&Object.hasOwn(walkStarts,name)){selectWalk(name);canvas.scrollIntoView({block:'start'});canvas.focus({preventScroll:true});return;}
+ if(walking)setWalking(false);
+ select(name);
+}));
 document.querySelector('#walls').addEventListener('click',event=>{
  cut=!cut;event.currentTarget.setAttribute('aria-pressed',cut);build();draw();
 });
@@ -1604,7 +1744,7 @@ chooser('foldBed','Klappbett · Zimmer Eingang',{'Eingeklappt':'closed','Ausgekl
  if(redraw){validateFurniturePositions();build();draw();}
 });
 chooser('parquet','Parkettrichtung',{'Quer':'quer','Längs':'laengs'},'quer',(value,redraw)=>{longParquet=value==='laengs';if(redraw){build();draw();}});
-if(walking)chooser('ceiling','Decke',{'Holz':'holz','Warmweiss':'weiss'},ceiling,(value,redraw)=>{ceiling=value;if(redraw){build();draw();}});
+chooser('ceiling','Decke',{'Holz':'holz','Warmweiss':'weiss'},ceiling,(value,redraw)=>{ceiling=value;if(redraw){build();draw();}});
 chooser('bath-tile','Badboden',{'Neue Fliesen':'neu','Bestandsfliesen':'bestand','Sandbeige · Quadratisch':'sand','Schiefergrau · Quadratisch':'slate','Terracotta · Quadratisch':'terracotta','Kreideweiss · Rechteckig':'white','Terrazzo · Hell':'terrazzo'},bathFloor,(value,redraw)=>{
  bathFloor=value;
  if(redraw){build();draw();}
@@ -1984,8 +2124,9 @@ canvas.addEventListener('pointermove',e=>{
    return;
  }
  if(!last||selected==='Küchenmasse')return;
- angle-=(e.clientX-last.x)*.009;
- elevation=Math.max(walking?-1.55:.12,Math.min(1.55,elevation+(e.clientY-last.y)*.009));
+ const sensitivity=walking?.0045:.009;
+ angle-=(e.clientX-last.x)*sensitivity;
+ elevation=Math.max(walking?-1.42:.12,Math.min(walking?1.42:1.55,elevation+(e.clientY-last.y)*sensitivity));
  last.x=e.clientX;last.y=e.clientY;draw();
 });
 for(const name of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(name,e=>{
@@ -1994,7 +2135,7 @@ for(const name of ['pointerup','pointercancel','lostpointercapture'])canvas.addE
  if(dragFurniture){dragFurniture=null;saveFurniturePositions();}
 });
 function zoom(factor){
- if(walking)fieldOfView=Math.min(1.93,Math.max(.40,fieldOfView*factor));
+ if(walking)fieldOfView=Math.min(1.45,Math.max(.55,fieldOfView*factor));
  else span=Math.min(24,Math.max(1.5,span*factor));
  draw();
 }
@@ -2021,11 +2162,82 @@ canvas.addEventListener('keydown',e=>{
  }
  e.preventDefault();draw();
 });
+const movementKeys={w:'forward',a:'left',s:'back',d:'right'};
+const heldSteps=new Map();
+let walkFrame=0,walkTime=0;
+const playerRadius=.15;
+const walkBlocked=[...furnitureWalls,
+ {x:.00,y:.00,w:8.60,d:.19},
+ {x:.00,y:8.81,w:8.60,d:.19}
+];
+function canWalk(x,y){
+ if(x<.19+playerRadius||x>8.41-playerRadius||y<.19+playerRadius||y>8.81-playerRadius)return false;
+ return !walkBlocked.some(wall=>{
+   const nearX=Math.max(wall.x,Math.min(x,wall.x+wall.w));
+   const nearY=Math.max(wall.y,Math.min(y,wall.y+wall.d));
+   return (x-nearX)**2+(y-nearY)**2<playerRadius**2;
+ });
+}
+function walkTick(time){
+ const step=1.45*Math.min(.032,walkTime?(time-walkTime)/1000:0);
+ walkTime=time;
+ const directions=new Set(heldSteps.values());
+ const forward=Number(directions.has('forward'))-Number(directions.has('back'));
+ const strafe=Number(directions.has('right'))-Number(directions.has('left'));
+ const scale=step/Math.max(1,Math.hypot(forward,strafe));
+ const dx=scale*(forward*Math.cos(angle)+strafe*Math.sin(angle));
+ const dy=scale*(forward*Math.sin(angle)-strafe*Math.cos(angle));
+ const [x,y]=center;
+ if(canWalk(x+dx,y))center[0]+=dx;
+ if(canWalk(center[0],y+dy))center[1]+=dy;
+ if(x!==center[0]||y!==center[1])draw();
+ walkFrame=requestAnimationFrame(walkTick);
+}
+function holdStep(key,direction){
+ heldSteps.set(key,direction);
+ if(!walkFrame)walkFrame=requestAnimationFrame(walkTick);
+}
+function releaseStep(key){
+ heldSteps.delete(key);
+ if(!heldSteps.size)stopWalking();
+}
+function stopWalking(){
+ heldSteps.clear();
+ cancelAnimationFrame(walkFrame);
+ walkFrame=0;walkTime=0;
+}
+canvas.addEventListener('keydown',event=>{
+ if(!walking)return;
+ const key=event.key.toLowerCase();
+ if(key==='escape'){setWalking(false);return;}
+ if(!Object.hasOwn(movementKeys,key)||event.ctrlKey||event.metaKey||event.altKey)return;
+ event.preventDefault();
+ holdStep(key,movementKeys[key]);
+});
+window.addEventListener('keyup',event=>releaseStep(event.key.toLowerCase()));
+window.addEventListener('blur',stopWalking);
+canvas.addEventListener('blur',()=>{
+ for(const key of Object.keys(movementKeys))releaseStep(key);
+});
+for(const button of walkControls.querySelectorAll('[data-step]')){
+ button.addEventListener('pointerdown',event=>{
+   if(event.button!==0)return;
+   event.preventDefault();
+   button.setPointerCapture(event.pointerId);
+   holdStep(event.pointerId,button.dataset.step);
+ });
+ for(const type of ['pointerup','pointercancel','lostpointercapture']){
+   button.addEventListener(type,event=>releaseStep(event.pointerId));
+ }
+ button.addEventListener('click',event=>{
+   if(event.detail!==0)return;
+   const key=button.dataset.step;
+   holdStep(key,key);
+   setTimeout(()=>releaseStep(key),180);
+ });
+}
 new ResizeObserver(draw).observe(canvas);
-if(walking){
- const requested=new URLSearchParams(location.search).get('room');
- selectWalk(walkRooms.includes(requested)?requested:'wohn');
- document.querySelector('#reset-walk').onclick=()=>selectWalk(walkRoom);
-}else{validateFurniturePositions();select('Wohnung');}
+validateFurniturePositions();
+select('Wohnung');
 }
 </script>
