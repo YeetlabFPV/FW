@@ -61,7 +61,9 @@ main[data-mode="walk"]:fullscreen canvas{height:calc(100dvh - 105px)}
 .walk-controls button{width:44px;height:44px;justify-content:center;font-size:19px;background:#f8faf6ed;touch-action:none;user-select:none}
 .walk-controls button:first-child{grid-column:2}.walk-controls button:nth-child(2){grid-column:1}
 .stage.walking canvas{cursor:crosshair}
-#leave-walk{position:absolute;right:12px;top:12px;background:#f8faf6ed}
+.walk-actions{position:absolute;right:12px;top:12px;left:12px;display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap;pointer-events:none}
+.walk-actions button{pointer-events:auto;background:#f8faf6ed}
+.walk-actions button[aria-pressed="true"]{background:#38584b}
 @media(max-width:780px){section:not(:fullscreen) .stage.walking canvas{height:70dvh;min-height:0}}
 footer{padding:8px 12px;font-size:13px;color:#4a5b51}
 @media(max-width:780px){main{grid-template-columns:1fr}body{padding:12px}aside{max-height:none}}
@@ -94,7 +96,7 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
  </div>
  <small id="placement-message" role="status">Möbel auswählen und in der Draufsicht ziehen.</small>
 </div>
-<div class="stage"><canvas tabindex="0" aria-label="3D-Modell. Mit Pfeiltasten drehen, mit Plus und Minus zoomen. Mit Umschalt und Pfeiltasten die Ansicht verschieben."></canvas><svg id="dimensions" role="img" aria-label="Wandabstände in Zentimetern"></svg><button type="button" id="leave-walk" hidden>Rundgang verlassen</button><div class="walk-controls" id="walk-controls" role="group" aria-label="Gehrichtung" hidden>
+<div class="stage"><canvas tabindex="0" aria-label="3D-Modell. Mit Pfeiltasten drehen, mit Plus und Minus zoomen. Mit Umschalt und Pfeiltasten die Ansicht verschieben."></canvas><svg id="dimensions" role="img" aria-label="Wandabstände in Zentimetern"></svg><div class="walk-actions" id="walk-actions" hidden><button type="button" id="mouse-look" aria-pressed="false" hidden>Maussteuerung</button><button type="button" id="leave-walk">Rundgang verlassen</button></div><div class="walk-controls" id="walk-controls" role="group" aria-label="Gehrichtung" hidden>
 <button type="button" data-step="forward" aria-label="Vorwärts">↑</button>
 <button type="button" data-step="left" aria-label="Nach links">←</button>
 <button type="button" data-step="back" aria-label="Rückwärts">↓</button>
@@ -1555,7 +1557,8 @@ function draw(){
  if(walking){
    const limit=Math.tan(fieldOfView/2);
    gl.uniform3fv(uniforms.center,center);
-   gl.uniform3fv(uniforms.right,[s,-c,0]);
+   // The floor plan's y axis points down. Facing +y, screen-right is -x.
+   gl.uniform3fv(uniforms.right,[-s,c,0]);
    gl.uniform3fv(uniforms.up,[-c*v,-s*v,e]);
    gl.uniform3fv(uniforms.front,[c*e,s*e,v]);
    gl.uniform2f(uniforms.scale,height/(width*limit),1/limit);
@@ -1586,6 +1589,48 @@ function select(name){
 const walkButton=document.querySelector('#walk-mode');
 const walkControls=document.querySelector('#walk-controls');
 const leaveWalkButton=document.querySelector('#leave-walk');
+const walkActions=document.querySelector('#walk-actions');
+const mouseLookButton=document.querySelector('#mouse-look');
+const coarsePointer=matchMedia('(pointer: coarse)');
+const mouseLocked=()=>document.pointerLockElement===canvas;
+let freeLook=false,hadMouseLock=false;
+function updateMouseLook(){
+ mouseLookButton.hidden=coarsePointer.matches;
+ mouseLookButton.setAttribute('aria-pressed',freeLook);
+ mouseLookButton.textContent=freeLook?'Maus freigeben':'Maussteuerung';
+ if(walking){
+   document.querySelector('#status').textContent=mouseLocked()
+     ?'WASD zum Gehen · Maus bewegen zum Umschauen · Esc gibt die Maus frei'
+     :freeLook?'WASD zum Gehen · Maus im Ansichtsfenster bewegen · Esc beendet die Maussteuerung'
+     :'WASD oder Pfeilbuttons zum Gehen · Ziehen zum Umschauen';
+ }
+}
+function releaseMouseLook(){
+ freeLook=false;
+ if(mouseLocked())document.exitPointerLock();
+ updateMouseLook();
+}
+mouseLookButton.onclick=async()=>{
+ if(freeLook){releaseMouseLook();return;}
+ freeLook=true;
+ canvas.focus({preventScroll:true});
+ updateMouseLook();
+ try{await canvas.requestPointerLock?.();}catch{updateMouseLook();}
+};
+document.addEventListener('pointerlockchange',()=>{
+ const locked=mouseLocked();
+ if(locked&&(!walking||!freeLook)){document.exitPointerLock();return;}
+ if(hadMouseLock&&!locked)freeLook=false;
+ hadMouseLock=locked;
+ updateMouseLook();
+ if(locked)canvas.focus({preventScroll:true});
+});
+document.addEventListener('pointerlockerror',updateMouseLook);
+document.addEventListener('mousemove',event=>{
+ if(!walking||!freeLook||(!mouseLocked()&&event.target!==canvas))return;
+ turnWalk(event.movementX,event.movementY,true);
+});
+coarsePointer.addEventListener('change',updateMouseLook);
 const canvasHelp=canvas.getAttribute('aria-label');
 let returnView='Wohnung';
 function selectWalk(name){
@@ -1603,19 +1648,19 @@ function setWalking(active){
    loadWalkLandscape();
  }
  walking=active;
+ if(!active)releaseMouseLook();
  stopWalking();
  walkButton.setAttribute('aria-pressed',active);
  walkButton.textContent=active?'Zur Modellansicht':'Wohnung begehen';
- walkControls.hidden=leaveWalkButton.hidden=!active;
+ walkControls.hidden=walkActions.hidden=!active;
+ updateMouseLook();
  canvas.closest('.stage').classList.toggle('walking',active);
  for(const id of ['pan-view','walls','doors','placement']){
    document.getElementById(id).disabled=active;
  }
  centerButton.hidden=active||(!viewX&&!viewY);
  dimensions.replaceChildren();
- document.querySelector('#status').textContent=active
-   ?'WASD oder Pfeilbuttons zum Gehen · Ziehen zum Umschauen'
-   :'Ziehen zum Drehen · Scrollen zum Zoomen';
+ if(!active)document.querySelector('#status').textContent='Ziehen zum Drehen · Scrollen zum Zoomen';
  canvas.setAttribute('aria-label',active
    ?'Begehbare Wohnung. WASD zum Gehen, Pfeiltasten zum Umschauen.'
    :canvasHelp);
@@ -2121,8 +2166,14 @@ function pickFurniture(x,y){
  }
 }
 let last;
+function turnWalk(dx,dy,locked=false){
+ const sensitivity=locked?.0028:.0045;
+ angle+=dx*sensitivity;
+ elevation=Math.max(-1.42,Math.min(1.42,elevation-dy*sensitivity));
+ draw();
+}
 canvas.addEventListener('pointerdown',e=>{
- if(!e.isPrimary||e.button!==0)return;
+ if(!e.isPrimary||e.button!==0||freeLook)return;
  const panning=!walking&&(panMode||e.shiftKey);
  if(placingFurniture&&!panning){
    const point=furniturePoint(e),id=pickFurniture(...point);
@@ -2137,7 +2188,7 @@ canvas.addEventListener('pointerdown',e=>{
  last={id:e.pointerId,x:e.clientX,y:e.clientY,panning};
 });
 canvas.addEventListener('pointermove',e=>{
- if(!e.isPrimary)return;
+ if(!e.isPrimary||freeLook)return;
  if(last?.id===e.pointerId&&last.panning){
    setViewOffset(viewX+e.clientX-last.x,viewY+e.clientY-last.y);
    last.x=e.clientX;last.y=e.clientY;
@@ -2160,10 +2211,12 @@ canvas.addEventListener('pointermove',e=>{
    return;
  }
  if(!last||selected==='Küchenmasse')return;
- const sensitivity=walking?.0045:.009;
- angle-=(e.clientX-last.x)*sensitivity;
- elevation=Math.max(walking?-1.42:.12,Math.min(walking?1.42:1.55,elevation+(e.clientY-last.y)*sensitivity));
- last.x=e.clientX;last.y=e.clientY;draw();
+ const dx=e.clientX-last.x,dy=e.clientY-last.y;
+ last.x=e.clientX;last.y=e.clientY;
+ if(walking){turnWalk(dx,dy);return;}
+ angle-=dx*.009;
+ elevation=Math.max(.12,Math.min(1.55,elevation+dy*.009));
+ draw();
 });
 for(const name of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(name,e=>{
  if(!e.isPrimary)return;
@@ -2190,8 +2243,8 @@ canvas.addEventListener('keydown',e=>{
  switch(e.key){
  case '+':zoom(.88);break;
  case '-':zoom(1.14);break;
- case 'ArrowLeft':angle+=.15;break;
- case 'ArrowRight':angle-=.15;break;
+ case 'ArrowLeft':angle+=walking?-.15:.15;break;
+ case 'ArrowRight':angle+=walking?.15:-.15;break;
  case 'ArrowUp':elevation=Math.min(Math.PI/2,elevation+.12);break;
  case 'ArrowDown':elevation=Math.max(walking?-1.55:.12,elevation-.12);break;
  default:return;
@@ -2221,8 +2274,8 @@ function walkTick(time){
  const forward=Number(directions.has('forward'))-Number(directions.has('back'));
  const strafe=Number(directions.has('right'))-Number(directions.has('left'));
  const scale=step/Math.max(1,Math.hypot(forward,strafe));
- const dx=scale*(forward*Math.cos(angle)+strafe*Math.sin(angle));
- const dy=scale*(forward*Math.sin(angle)-strafe*Math.cos(angle));
+ const dx=scale*(forward*Math.cos(angle)-strafe*Math.sin(angle));
+ const dy=scale*(forward*Math.sin(angle)+strafe*Math.cos(angle));
  const [x,y]=center;
  if(canWalk(x+dx,y))center[0]+=dx;
  if(canWalk(center[0],y+dy))center[1]+=dy;
@@ -2245,7 +2298,7 @@ function stopWalking(){
 canvas.addEventListener('keydown',event=>{
  if(!walking)return;
  const key=event.key.toLowerCase();
- if(key==='escape'){setWalking(false);return;}
+ if(key==='escape'){if(freeLook)releaseMouseLook();else setWalking(false);return;}
  if(!Object.hasOwn(movementKeys,key)||event.ctrlKey||event.metaKey||event.altKey)return;
  event.preventDefault();
  holdStep(key,movementKeys[key]);
