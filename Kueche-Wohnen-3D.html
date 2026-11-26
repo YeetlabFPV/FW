@@ -187,7 +187,9 @@ for(const [type,source] of [[gl.VERTEX_SHADER,`
  uniform vec3 center;
  uniform bool perspective,hasLandscape,hasWood;
  uniform sampler2D landscape,woodAtlas;
- uniform vec4 floorOccluders[4];
+ uniform bool detailedLight;
+ uniform vec4 floorOccluders[14];
+ uniform float floorAngles[14];
  float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
  float noise(vec2 p){
    vec2 i=floor(p),f=fract(p);
@@ -303,6 +305,20 @@ for(const [type,source] of [[gl.VERTEX_SHADER,`
    vec3 aggregate=seed<.46?vec3(.38,.34,.31):seed<.68?vec3(.64,.48,.40):vec3(.94,.89,.82);
    return mix(shade,aggregate*.92,chip);
  }
+ vec3 litSurface(vec3 color){
+   if(!detailedLight)return color;
+   vec3 normal=${derivatives?'normalize(cross(dFdx(world),dFdy(world)))':'vec3(0.,0.,1.)'};
+   vec3 window=vec3(6.43,8.81,1.58);
+   if(world.y<4.1)window=vec3(8.41,2.56,1.50);
+   if(world.x<3.80)window=vec3(.19,clamp(world.y,1.35,7.16),1.50);
+   vec3 ray=window-world;
+   float roomLight=1./(1.+dot(ray,ray)*.33);
+   float facing=max(0.,dot(normal,normalize(ray+vec3(.0001))));
+   float bottom=1.-smoothstep(.03,.38,world.z);
+   float upper=smoothstep(2.00,2.43,world.z);
+   vec3 lit=color*(.89-.10*bottom-.075*upper+roomLight*.30+facing*.23);
+   return clamp(lit+color*vec3(.046,.034,.017)*roomLight,0.,1.);
+ }
  void main(){
    float grain=1.;
    vec3 detail=vec3(0.);
@@ -329,11 +345,11 @@ for(const [type,source] of [[gl.VERTEX_SHADER,`
      float eye=exp(-dot(knot*vec2(9.,5.),knot*vec2(9.,5.)))*step(.58,hash(cell+4.));
      float grain=(noise(p*vec2(6.,135.))-.5)*.12;
      vec3 sampleGrain=hasWood?woodDetail(p,.15,1.1,0.)*.38:vec3(0.);
-     gl_FragColor=vec4(shade*(1.+grain+sampleGrain-.40*eye),1.);
+     gl_FragColor=vec4(litSurface(shade*(1.+grain+sampleGrain-.40*eye)),1.);
      return;
    }
    if(isOak>11.5){
-     gl_FragColor=vec4(materialSurface(isOak),1.);
+     gl_FragColor=vec4(litSurface(materialSurface(isOak)),1.);
      return;
    }
    if(isOak>10.5){
@@ -389,14 +405,20 @@ for(const [type,source] of [[gl.VERTEX_SHADER,`
    grain*=1.+.135*daylight-(perspective?.085:.047)*low-.041*high;
    if(world.z<.20){
      float contact=0.;
-     for(int i=0;i<4;i++){
+     for(int i=0;i<14;i++){
+       if(i>=4&&!detailedLight)break;
        vec4 b=floorOccluders[i];
-       vec2 delta=max(max(b.xy-world.xy,world.xy-b.zw),0.);
-       contact=max(contact,1.-smoothstep(.012,.22,length(delta)));
+       float a=floorAngles[i],c=cos(a),s=sin(a);
+       vec2 p=world.xy-b.xy;
+       vec2 delta=max(abs(vec2(c*p.x+s*p.y,c*p.y-s*p.x))-b.zw,0.);
+       float distance=length(delta);
+       float soft=1.-smoothstep(.012,detailedLight?.55:.22,distance);
+       float tight=detailedLight?.13*(1.-smoothstep(.009,.13,distance)):0.;
+       contact=max(contact,(detailedLight?.38:.24)*soft+tight);
      }
-     grain*=1.-.24*contact*(1.-smoothstep(.03,.20,world.z));
+     grain*=1.-contact*(1.-smoothstep(.025,.20,world.z));
    }
-   gl_FragColor=vec4(shade*(grain+detail),1.);
+   gl_FragColor=vec4(litSurface(shade*(grain+detail)),1.);
  }
  `]]){
  const shader=gl.createShader(type);
@@ -437,11 +459,10 @@ function loadWalkLandscape(){
  };
  picture.src='Alpen-Ausblick.jpg';
 }
-const occluders=['Halbinsel_Korpus','Kuehlschrank_Vollgroesse','Wandzeile_Arbeitsplatte','Sofa_Sockel'];
-gl.uniform4fv(gl.getUniformLocation(program,'floorOccluders[0]'),occluders.flatMap(name=>{
- const {x,y,w,d}=model.find(b=>b.name===name);
- return [x,y,x+w,y+d];
-}));
+const floorOccluderNames=['Halbinsel_Korpus','Kuehlschrank_Vollgroesse','Wandzeile_Arbeitsplatte'];
+const floorOccluderUniform=gl.getUniformLocation(program,'floorOccluders[0]');
+const floorAngleUniform=gl.getUniformLocation(program,'floorAngles[0]');
+const detailedLightUniform=gl.getUniformLocation(program,'detailedLight');
 const woodPicture=new Image();
 woodPicture.onload=()=>{
  const texture=gl.createTexture();
@@ -828,7 +849,21 @@ function validateFurniturePositions(){
  }
  saveFurniturePositions();
 }
+function updateContactShadows(){
+ const fixed=floorOccluderNames.map(name=>model.find(piece=>piece.name===name))
+   .map(piece=>[piece.x+piece.w/2,piece.y+piece.d/2,piece.w/2,piece.d/2,0]);
+ const movable=[...furnitureGroups.keys()].filter(id=>!removedFurniture.has(id)).map(id=>{
+   const {x,y,w,d}=furnitureBounds(id);
+   const {dx,dy,angle}=furniturePositions[id]??defaultPosition;
+   return [x+dx,y+dy,w,d,angle];
+ }).sort((a,b)=>b[2]*b[3]-a[2]*a[3]);
+ const shadows=fixed.concat(movable).slice(0,14);
+ while(shadows.length<14)shadows.push([-100,-100,0,0,0]);
+ gl.uniform4fv(floorOccluderUniform,shadows.flatMap(shadow=>shadow.slice(0,4)));
+ gl.uniform1fv(floorAngleUniform,shadows.map(shadow=>shadow[4]));
+}
 function build(){
+ updateContactShadows();
  const data=[],glass=[];
  const sink=model.find(piece=>piece.name==='Spuele');
  const activePlacements=new Map();
@@ -1513,6 +1548,7 @@ function draw(){
  gl.viewport(0,0,width,height);
  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
  gl.uniform1i?.(uniforms.perspective,Number(walking));
+ gl.uniform1i(detailedLightUniform,Number(highQuality));
  const c=Math.cos(angle),s=Math.sin(angle),e=Math.cos(elevation),v=Math.sin(elevation);
  if(!walking)setViewOffset(viewX,viewY);
  gl.uniform2f(uniforms.viewOffset,walking?0:2*viewX/canvas.clientWidth,walking?0:-2*viewY/canvas.clientHeight);
