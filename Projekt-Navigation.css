@@ -3,3 +3,11 @@
 .project-nav a:hover{background:#e8eee6}
 .project-nav a[aria-current=page]{background:#38584b;color:#fff}
 .project-nav a:focus-visible{outline:2px solid #38584b;outline-offset:2px}
+
+.view-mode{display:inline-flex;flex-wrap:nowrap;align-items:center;gap:2px;padding:3px;border:1px solid #d2dbd1;border-radius:9px;background:#eef1eb;font-weight:650}
+.view-mode>a,.view-mode>span{display:inline-flex;align-items:center;padding:.35em .65em;min-height:32px;border-radius:6px;color:#29483b;white-space:nowrap;text-decoration:none}
+.view-mode>a:hover{background:#dce6da}
+.view-mode>a:focus-visible{outline:2px solid #38584b;outline-offset:1px}
+.view-mode>[aria-current=page]{color:#fff;background:#38584b}
+.view-mode>[aria-disabled=true]{color:#626d66}
+.view-mode>[hidden]{display:none}

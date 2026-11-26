@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Blender-Begehung · Wohnung</title>
-<link rel="stylesheet" href="../Projekt-Navigation.css">
+<link rel="stylesheet" href="../Projekt-Navigation.css?v=ansicht-1">
 <style>
 :root{font:16px/1.4 system-ui,sans-serif;color:#2d3932;background:#eeeae2}
 *{box-sizing:border-box}body{margin:0}header{display:flex;gap:.65rem 1rem;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:.65rem .9rem}h1{margin:0;font-size:clamp(17px,2.6vw,26px)}header div{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
@@ -14,8 +14,9 @@ a,button,select{font:inherit;color:inherit}button,select{background:#faf8f3;bord
 @media(max-width:600px){main{height:calc(100dvh - 136px)}}
 </style>
 <div id="experience">
-<nav class="project-nav" aria-label="Seitennavigation"><a href="../index.html">Startseite</a> <a id="pano-return" href="../Wohnen-und-Bad-360.html?variante=taubenblau-2">Blender-Ansichten (360°)</a> <a href="../Kueche-Wohnen-3D.html">3D-Konfigurator</a> <a href="../Kueche-Wohnen-3D.html?modus=begehen">Begehung</a> <a href="../Kostenschaetzung.html">Kostenschätzung</a></nav>
+<nav class="project-nav" aria-label="Seitennavigation"><a href="../index.html">Startseite</a> <a href="../Wohnen-und-Bad-360.html">Blender-Ansichten (360°)</a> <a href="../Kueche-Wohnen-3D.html">3D-Konfigurator</a> <a href="../Kueche-Wohnen-3D.html?modus=begehen">Begehung</a> <a href="../Kostenschaetzung.html">Kostenschätzung</a></nav>
 <header><h1 id="title">Blender-Begehung</h1><div>
+<div class="view-mode" role="group" aria-label="Ansichtsmodus"><a id="pano-return" href="../Wohnen-und-Bad-360.html?variante=taubenblau-2">360°-Ansicht</a><span aria-current="page">Frei begehen</span></div>
 <label>Startpunkt <select id="room"><option>Küche</option><option>Stube</option><option>Eingang</option><option>Bad</option></select></label>
 <button type="button" id="mouse">Maus übernehmen</button><button type="button" id="full">Vollbild</button></div></header>
 <main><canvas tabindex="0" aria-label="Begehbares Modell der Wohnung"></canvas><span id="status" role="status">3D-Szene lädt …</span>
