@@ -63,6 +63,9 @@ const removed=new Set();
 const photoKey=link=>link.getAttribute('href');
 function syncHidden(){
  for(const link of galleryLinks)link.closest('figure').hidden=hidden.has(photoKey(link))||removed.has(photoKey(link));
+ for(const section of document.querySelectorAll('.gallery')){
+   section.hidden=!section.querySelector('figure:not([hidden])');
+ }
  document.querySelector('#restore-photos-container').hidden=hidden.size===0;
  try{localStorage.setItem(hiddenKey,JSON.stringify([...hidden]));}catch{}
 }
