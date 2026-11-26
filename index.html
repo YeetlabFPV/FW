@@ -47,56 +47,7 @@
  <div class="photo-toolbar"><button type="button" id="photo-hide">Auf diesem Gerät ausblenden</button> <button type="button" id="photo-delete" hidden>Aus Galerie löschen</button></div>
  <figure><img id="photo-image" alt=""><figcaption id="photo-caption"></figcaption></figure>
 </dialog>
-<script src="Team-Konfiguration.js">const adminForm=document.querySelector('#gallery-admin-login');
-const adminStatus=document.querySelector('#gallery-admin-status');
-const deletePhoto=document.querySelector('#photo-delete');
-let galleryClient;
-async function initGallery(){
- const config=window.fwTeamConfig;
- const {createClient}=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/+esm');
- galleryClient=createClient(config.url,config.publishableKey);
- const result=await galleryClient.from('fw_gallery_removed').select('path');
- if(result.error)throw new Error('Galerie-Änderungen konnten nicht geladen werden.');
- for(const row of result.data)removed.add(row.path);
- syncHidden();
- const {data:{session}}=await galleryClient.auth.getSession();
- if(session&&!session.user.is_anonymous){
-   const {data}=await galleryClient.rpc('fw_is_admin');
-   if(data===true){
-     adminForm.hidden=true;
-     deletePhoto.hidden=false;
-     adminStatus.textContent='Als Admin angemeldet. Öffne ein Bild, um es aus der Galerie zu löschen.';
-   }
- }
-}
-const galleryReady=initGallery().catch(error=>{adminStatus.textContent=error.message;});
-adminForm.addEventListener('submit',async event=>{
- event.preventDefault();
- await galleryReady;
- if(!galleryClient)return;
- const email=String(new FormData(adminForm).get('email')).trim();
- const {error}=await galleryClient.auth.signInWithOtp({email,options:{emailRedirectTo:new URL('Team-Ablage.html',location.href).href}});
- adminStatus.textContent=error?'Der Anmeldelink konnte nicht gesendet werden.':'Öffne den Anmeldelink und kehre danach zur Startseite zurück.';
-});
-deletePhoto.addEventListener('click',async()=>{
- const target=gallery[photoIndex];
- if(!target||!confirm('Dieses Bild für alle aus der Startseiten-Galerie löschen?'))return;
- deletePhoto.disabled=true;
- try{
-   const path=photoKey(target);
-   const {error}=await galleryClient.from('fw_gallery_removed').insert({path});
-   if(error&&error.code!=='23505')throw error;
-   removed.add(path);
-   syncHidden();
-   viewer.close();
-   adminStatus.textContent='Bild aus der Galerie gelöscht.';
- }catch{
-   viewer.close();
-   adminStatus.textContent='Das Bild konnte nicht gelöscht werden.';
-   document.querySelector('#gallery-admin').open=true;
- }finally{deletePhoto.disabled=false;}
-});
-</script>
+<script src="Team-Konfiguration.js"></script>
 <script>
 const viewer=document.querySelector('#photo-viewer');
 const photo=document.querySelector('#photo-image');
@@ -176,6 +127,55 @@ photo.addEventListener('touchcancel',()=>{swipeStart=null;});
 viewer.addEventListener('close',()=>{
  if(trigger?.closest('figure').hidden)document.querySelector('#restore-photos').focus();
  else trigger?.focus();
+});
+const adminForm=document.querySelector('#gallery-admin-login');
+const adminStatus=document.querySelector('#gallery-admin-status');
+const deletePhoto=document.querySelector('#photo-delete');
+let galleryClient;
+async function initGallery(){
+ const config=window.fwTeamConfig;
+ const {createClient}=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/+esm');
+ galleryClient=createClient(config.url,config.publishableKey);
+ const result=await galleryClient.from('fw_gallery_removed').select('path');
+ if(result.error)throw new Error('Galerie-Änderungen konnten nicht geladen werden.');
+ for(const row of result.data)removed.add(row.path);
+ syncHidden();
+ const {data:{session}}=await galleryClient.auth.getSession();
+ if(session&&!session.user.is_anonymous){
+   const {data}=await galleryClient.rpc('fw_is_admin');
+   if(data===true){
+     adminForm.hidden=true;
+     deletePhoto.hidden=false;
+     adminStatus.textContent='Als Admin angemeldet. Öffne ein Bild, um es aus der Galerie zu löschen.';
+   }
+ }
+}
+const galleryReady=initGallery().catch(error=>{adminStatus.textContent=error.message;});
+adminForm.addEventListener('submit',async event=>{
+ event.preventDefault();
+ await galleryReady;
+ if(!galleryClient)return;
+ const email=String(new FormData(adminForm).get('email')).trim();
+ const {error}=await galleryClient.auth.signInWithOtp({email,options:{emailRedirectTo:new URL('Team-Ablage.html',location.href).href}});
+ adminStatus.textContent=error?'Der Anmeldelink konnte nicht gesendet werden: '+error.message:'Öffne den Anmeldelink und kehre danach zur Startseite zurück.';
+});
+deletePhoto.addEventListener('click',async()=>{
+ const target=gallery[photoIndex];
+ if(!target||!confirm('Dieses Bild für alle aus der Startseiten-Galerie löschen?'))return;
+ deletePhoto.disabled=true;
+ try{
+   const path=photoKey(target);
+   const {error}=await galleryClient.from('fw_gallery_removed').insert({path});
+   if(error&&error.code!=='23505')throw error;
+   removed.add(path);
+   syncHidden();
+   viewer.close();
+   adminStatus.textContent='Bild aus der Galerie gelöscht.';
+ }catch{
+   viewer.close();
+   adminStatus.textContent='Das Bild konnte nicht gelöscht werden.';
+   document.querySelector('#gallery-admin').open=true;
+ }finally{deletePhoto.disabled=false;}
 });
 </script>
 </html>
