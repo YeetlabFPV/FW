@@ -7,6 +7,9 @@
 :root{font:15px/1.5 system-ui,sans-serif;color:#263830;background:#f4f4ee}
 body{margin:0;padding:clamp(12px,1.6vw,32px)}
 h1{font-size:clamp(25px,4vw,42px);letter-spacing:-.045em;margin:0 0 12px}
+.page-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.page-header h1{margin:0}
+.page-header .control{font-weight:700}
 main{display:grid;grid-template-columns:minmax(0,1fr) clamp(270px,20vw,380px);gap:18px}
 section,aside{background:#fff;border:1px solid #dbdfd6;border-radius:14px;overflow:hidden}
 aside{padding:18px;max-height:calc(100dvh - 100px);overflow:auto}
@@ -35,12 +38,12 @@ section:fullscreen canvas{height:100%;min-height:0}
 footer{padding:8px 12px;font-size:13px;color:#4a5b51}
 @media(max-width:780px){main{grid-template-columns:1fr}body{padding:12px}aside{max-height:none}}
 </style>
-<h1>Umbau · Küche, Wohnen und Bad</h1>
+<header class="page-header"><h1>Umbau · Küche, Wohnen und Bad</h1><div><a class="control" href="Wohnen-und-Bad-360.html">360°-Rundgang</a> <a class="control" href="index.html">Startseite</a></div></header>
 <main>
 <section aria-label="Interaktives 3D-Modell">
 <nav class="toolbar" aria-label="Ansicht"><strong>Blickwinkel</strong>
 <button data-view="Wohnung">Wohnung</button><button data-view="Küche">Küche</button><button data-view="Küchenmasse">Küchenmasse</button><button data-view="Wohnen">Wohnen</button><button data-view="Bad">Bad</button><button data-view="Draufsicht">Draufsicht</button><button id="walls" aria-pressed="true">Wände kürzen</button>
-<button id="doors" aria-pressed="false">Türblätter</button><button id="full">Vollbild</button><a class="control" href="Wohnen-und-Bad-360.html">360°-Rundgang</a></nav>
+<button id="doors" aria-pressed="false">Türblätter</button><button id="full">Vollbild</button></nav>
 <div class="stage"><canvas tabindex="0" aria-label="3D-Modell. Mit Pfeiltasten drehen, mit Plus und Minus zoomen."></canvas><svg id="dimensions" role="img" aria-label="Wandabstände in Zentimetern"></svg></div>
 <footer id="status">Ziehen zum Drehen · Scrollen zum Zoomen</footer>
 </section>
