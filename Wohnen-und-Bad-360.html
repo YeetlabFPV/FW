@@ -53,12 +53,12 @@ main.expanded{position:fixed;inset:0;z-index:10;width:100vw}
 <footer id="hint">Markierungen anklicken, um weiterzugehen · Ziehen zum Umschauen · Scrollen zum Zoomen</footer>
 </main>
 <script>
-const images={"wohn-holz-schiefer":"cycles-4k-wohn-holz-schiefer.jpg","wohn-holz-parkett":"cycles-hd-wohn-holz-parkett.jpg","wohn-weiss-schiefer":"cycles-hd-wohn-weiss-schiefer.jpg","wohn-weiss-parkett":"cycles-hd-wohn-weiss-parkett.jpg","essen-holz-schiefer":"cycles-4k-essen-holz-schiefer.jpg","essen-holz-parkett":"cycles-hd-essen-holz-parkett.jpg","essen-weiss-schiefer":"cycles-hd-essen-weiss-schiefer.jpg","essen-weiss-parkett":"cycles-hd-essen-weiss-parkett.jpg","kueche-holz-schiefer":"cycles-4k-kueche-holz-schiefer.jpg","kueche-holz-parkett":"cycles-hd-kueche-holz-parkett.jpg","kueche-weiss-schiefer":"cycles-hd-kueche-weiss-schiefer.jpg","kueche-weiss-parkett":"cycles-hd-kueche-weiss-parkett.jpg","flur-holz-schiefer":"cycles-4k-flur-holz-schiefer.jpg","flur-holz-parkett":"cycles-hd-flur-holz-parkett.jpg","flur-weiss-schiefer":"cycles-hd-flur-weiss-schiefer.jpg","flur-weiss-parkett":"cycles-hd-flur-weiss-parkett.jpg","bad-holz-parkett":"cycles-hd-bad-holz-parkett.jpg","bad-holz-bestand":"cycles-hd-bad-holz-bestand.jpg","bad-holz-schiefer":"cycles-hd-bad-holz-parkett.jpg","bad-weiss-parkett":"cycles-hd-bad-weiss-parkett.jpg","bad-weiss-bestand":"cycles-hd-bad-weiss-bestand.jpg","bad-weiss-schiefer":"cycles-hd-bad-weiss-parkett.jpg"};
-const currentImages={"wohn-holz-schiefer":true,"essen-holz-schiefer":true,"kueche-holz-schiefer":true,"flur-holz-schiefer":true};
+const images={"wohn-holz-schiefer":"cycles-4k-wohn-holz-schiefer.jpg","wohn-holz-parkett":"cycles-4k-wohn-holz-parkett.jpg","wohn-weiss-schiefer":"cycles-hd-wohn-weiss-schiefer.jpg","wohn-weiss-parkett":"cycles-hd-wohn-weiss-parkett.jpg","essen-holz-schiefer":"cycles-4k-essen-holz-schiefer.jpg","essen-holz-parkett":"cycles-4k-essen-holz-parkett.jpg","essen-weiss-schiefer":"cycles-hd-essen-weiss-schiefer.jpg","essen-weiss-parkett":"cycles-hd-essen-weiss-parkett.jpg","kueche-holz-schiefer":"cycles-4k-kueche-holz-schiefer.jpg","kueche-holz-parkett":"cycles-4k-kueche-holz-parkett.jpg","kueche-weiss-schiefer":"cycles-hd-kueche-weiss-schiefer.jpg","kueche-weiss-parkett":"cycles-hd-kueche-weiss-parkett.jpg","flur-holz-schiefer":"cycles-4k-flur-holz-schiefer.jpg","flur-holz-parkett":"cycles-4k-flur-holz-parkett.jpg","flur-weiss-schiefer":"cycles-hd-flur-weiss-schiefer.jpg","flur-weiss-parkett":"cycles-hd-flur-weiss-parkett.jpg","bad-holz-parkett":"cycles-4k-bad-holz-parkett.jpg","bad-holz-bestand":"cycles-hd-bad-holz-bestand.jpg","bad-holz-schiefer":"cycles-4k-bad-holz-parkett.jpg","bad-weiss-parkett":"cycles-hd-bad-weiss-parkett.jpg","bad-weiss-bestand":"cycles-hd-bad-weiss-bestand.jpg","bad-weiss-schiefer":"cycles-hd-bad-weiss-parkett.jpg"};
+const currentImages={"wohn-holz-schiefer":true,"wohn-holz-parkett":true,"essen-holz-schiefer":true,"essen-holz-parkett":true,"kueche-holz-schiefer":true,"kueche-holz-parkett":true,"flur-holz-schiefer":true,"flur-holz-parkett":true,"bad-holz-parkett":true,"bad-holz-schiefer":true};
 const main=document.querySelector('main'),canvas=document.querySelector('canvas');
 const fallback=document.querySelector('.fallback');
 const gl=canvas.getContext('webgl',{alpha:false,antialias:false});
-const starts={wohn:[-1.01,-.13],essen:[-2.30,-.13],kueche:[3.11,-.21],flur:[-.32,-.24],bad:[.49,-.39]};
+const starts={wohn:[-1.01,-.13],essen:[-2.30,-.13],kueche:[3.11,-.21],flur:[-1.26,-.12],bad:[.49,-.39]};
 const positions={wohn:[5.42,6.20],essen:[7.78,4.80],kueche:[7.92,2.92],flur:[4.84,2.85],bad:[5.69,.77]};
 const routes={
  wohn:[['essen',7.53,4.85,.79],['flur',4.86,4.20,.83]],
@@ -97,7 +97,7 @@ function projectMarkers(width,height,scale){
  }
 }
 const maxFov=1.93;
-let room='wohn',finish='holz',floor='schiefer',bathFloor='neu',[yaw,pitch]=starts[room],fov=maxFov,texture,uniforms,last,revision=0;
+let room='wohn',finish='holz',floor='schiefer',bathFloor='neu',[yaw,pitch]=starts[room],fov=maxFov,texture,bathMask,uniforms,last,revision=0;
 function draw(){
  if(!gl||!texture)return;
  const ratio=Math.min(window.devicePixelRatio||1,2);
@@ -108,11 +108,21 @@ function draw(){
  gl.uniform2f(uniforms.camera,yaw,pitch);
  const width=Math.tan(fov/2);
  gl.uniform2f(uniforms.scale,width,width*h/w);
+ const stockKey='bad-'+finish+'-bestand';
+ gl.uniform1i(uniforms.showBlue,Number(room==='bad'&&bathFloor==='bestand'&&!currentImages[stockKey]&&canPreviewStock()));
  gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
  projectMarkers(w,h,width);
 }
 function reset(){
  [yaw,pitch]=starts[room];fov=maxFov;draw();
+}
+// Stock-floor preview for the matching 4K bath camera. The rest of the
+// scene is sampled directly from the same Cycles panorama.
+function canPreviewStock(){
+ return !!gl&&finish==='holz'&&currentImages['bad-holz-parkett'];
+}
+function hasStockRender(){
+ return ['parkett','bestand'].every(key=>currentImages['bad-'+finish+'-'+key]);
 }
 function select(next,material,heading){
  const moved=next!==room;
@@ -126,7 +136,7 @@ function select(next,material,heading){
  if(moved||!markers.length)makeMarkers();
  for(const {button} of markers)button.hidden=true;
  finish=material;
- const bathPair=['parkett','bestand'].every(b=>currentImages['bad-'+finish+'-'+b]);
+ const bathPair=hasStockRender()||canPreviewStock();
  if(!bathPair&&bathFloor==='bestand')bathFloor='neu';
  document.querySelector('[data-bathfloor="bestand"]').textContent=bathPair?'Bad Bestand':'Bestandsboden live';
  document.querySelectorAll('[data-room]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.room===room));
@@ -134,10 +144,12 @@ function select(next,material,heading){
  document.querySelectorAll('[data-floor]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.floor===floor));
  document.querySelectorAll('[data-bathfloor]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.bathfloor===bathFloor));
  document.querySelector('#live').href='Rundgang-Live.html?room='+room+(room==='bad'?'&bath='+bathFloor:'');
- const key=room==='bad'&&bathFloor==='bestand'?'bad-'+finish+'-bestand':room+'-'+finish+'-'+floor;
+ const stock=room==='bad'&&bathFloor==='bestand';
+ const key=stock&&hasStockRender()?'bad-'+finish+'-bestand':room+'-'+finish+'-'+floor;
  const url=images[key],current=++revision;
  const badge=document.querySelector('#render-state');
- const status=currentImages[key]?'Blender-Cycles · aktueller Entwurf · 4K':'Blender-Cycles · früherer Entwurfsstand';
+ const status=stock&&!hasStockRender()?'Blender-Cycles · 4K · blaue Fliesen als Vorschau':
+   currentImages[key]?'Blender-Cycles · aktueller Entwurf · 4K':'Blender-Cycles · früherer Entwurfsstand';
  badge.textContent='Panorama lädt …';
  if(!gl){fallback.src=url;badge.textContent=status;return;}
  const pic=new Image();
@@ -161,7 +173,14 @@ if(gl){
  precision highp float;
  varying vec2 screen;
  uniform vec2 camera,scale;
- uniform sampler2D image;
+ uniform sampler2D image,bathMask;
+ uniform bool showBlue;
+ float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+ float noise(vec2 p){
+   vec2 i=floor(p),f=smoothstep(0.,1.,fract(p));
+   return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),
+              mix(hash(i+vec2(0.,1.)),hash(i+1.),f.x),f.y);
+ }
  const float pi=3.14159265359;
  void main(){
    float a=camera.x, b=camera.y;
@@ -170,7 +189,21 @@ if(gl){
    vec3 u=vec3(-cos(a)*sin(b),-sin(a)*sin(b),cos(b));
    vec3 d=normalize(f+r*screen.x*scale.x+u*screen.y*scale.y);
    vec2 pos=vec2(fract(atan(d.y,d.x)/(2.*pi)+.5),.5-asin(clamp(d.z,-1.,1.))/pi);
-   gl_FragColor=texture2D(image,pos);
+   vec3 base=texture2D(image,pos).rgb;
+   if(showBlue&&d.z<-.12){
+     float mask=texture2D(bathMask,pos).r;
+     if(mask>0.){
+       vec2 tile=(vec2(5.69,.77)+d.xy*(1.455/-d.z)-vec2(5.4,.19))/.30;
+       float shade=dot(base,vec3(.26,.62,.12));
+       float cloud=(noise(tile*4.)-.5)*.16+(noise(tile*12.)-.5)*.07;
+       float variation=(hash(floor(tile))-.5)*.13;
+       float edge=min(min(fract(tile.x),1.-fract(tile.x)),min(fract(tile.y),1.-fract(tile.y)));
+       float joint=1.-smoothstep(.004,.015,edge);
+       vec3 blue=shade*vec3(.46,.52,.65)*(1.+cloud+variation);
+       base=mix(base,mix(blue,shade*vec3(.60,.61,.64),joint*.78),mask);
+     }
+   }
+   gl_FragColor=vec4(base,1.);
  }
  `]]){
   const shader=gl.createShader(type);gl.shaderSource(shader,code);gl.compileShader(shader);
@@ -180,8 +213,9 @@ if(gl){
  gl.linkProgram(p);
  if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(p));
  gl.useProgram(p);
- uniforms=Object.fromEntries(['camera','scale','image'].map(name=>[name,gl.getUniformLocation(p,name)]));
+ uniforms=Object.fromEntries(['camera','scale','image','bathMask','showBlue'].map(name=>[name,gl.getUniformLocation(p,name)]));
  gl.uniform1i(uniforms.image,0);
+ gl.uniform1i(uniforms.bathMask,1);
  const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
  const location=gl.getAttribLocation(p,'position');gl.enableVertexAttribArray(location);
@@ -189,6 +223,20 @@ if(gl){
  texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);
  for(const key of [gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T])gl.texParameteri(gl.TEXTURE_2D,key,gl.CLAMP_TO_EDGE);
  for(const key of [gl.TEXTURE_MIN_FILTER,gl.TEXTURE_MAG_FILTER])gl.texParameteri(gl.TEXTURE_2D,key,gl.LINEAR);
+ const matte=document.createElement('canvas');
+ matte.width=1400;matte.height=700;
+ const paint=matte.getContext('2d');
+ paint.fillStyle='#000';paint.fillRect(0,0,1400,700);
+ paint.fillStyle='#fff';
+ const outline=new Path2D('M0 655 Q134 662 243 615 Q370 622 511 595 L529 594 L595 554 Q603 550 605 542 L605 530 Q618 516 632 496 Q664 503 731 502 Q731 523 747 533 Q756 537 775 534 L771 563 L768 595 Q775 622 854 644 Q927 662 972 661 Q997 659 1008 635 L1022 602 Q1084 604 1138 596 Q1186 644 1270 652 Q1330 663 1400 657 L1400 700 L0 700Z');
+ paint.fill(outline);
+ bathMask=gl.createTexture();
+ gl.activeTexture(gl.TEXTURE1);
+ gl.bindTexture(gl.TEXTURE_2D,bathMask);
+ gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,matte);
+ for(const key of [gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T])gl.texParameteri(gl.TEXTURE_2D,key,gl.CLAMP_TO_EDGE);
+ for(const key of [gl.TEXTURE_MIN_FILTER,gl.TEXTURE_MAG_FILTER])gl.texParameteri(gl.TEXTURE_2D,key,gl.LINEAR);
+ gl.activeTexture(gl.TEXTURE0);
  new ResizeObserver(draw).observe(canvas);
 }else{
  canvas.hidden=true;fallback.hidden=false;
@@ -198,7 +246,7 @@ document.querySelectorAll('[data-room]').forEach(b=>b.onclick=()=>select(b.datas
 document.querySelectorAll('[data-finish]').forEach(b=>b.onclick=()=>select(room,b.dataset.finish));
 document.querySelectorAll('[data-floor]').forEach(b=>b.onclick=()=>{floor=b.dataset.floor;select(room,finish);});
 document.querySelectorAll('[data-bathfloor]').forEach(b=>b.onclick=()=>{
- if(b.dataset.bathfloor==='bestand'&&!['parkett','bestand'].every(b=>currentImages['bad-'+finish+'-'+b])){
+ if(b.dataset.bathfloor==='bestand'&&!hasStockRender()&&!canPreviewStock()){
    location.href='Rundgang-Live.html?room=bad&bath=bestand';
    return;
  }
