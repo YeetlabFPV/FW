@@ -36,15 +36,14 @@ main.expanded{position:fixed;inset:0;z-index:10;width:100vw}
 </style>
 </head>
 <body>
-<header><h1>Wohnen und Bad in 360°</h1><small>Aktueller Raumstand · Eichenparkett · Küchenboden wählbar</small></header>
+<header><h1>Wohnen und Bad in 360°</h1><small>Blender-Cycles · früherer Entwurfsstand</small></header>
 <main>
 <nav aria-label="Panorama einstellen">
 <div class="group" aria-label="Raum"><button data-room="wohn">Stube</button><button data-room="essen">Essplatz</button><button data-room="kueche">Küche</button><button data-room="flur">Flur</button><button data-room="bad">Bad</button></div>
 <div class="group" aria-label="Decke"><button data-finish="holz">Holzdecke</button><button data-finish="weiss">Warmweisse Decke</button></div>
-<div class="group" aria-label="Küchenboden"><button data-floor="schiefer">Schiefer</button><button data-floor="linoleum">Linoleum</button></div>
-<label>Linoleumfarbe <select id="linoleum-color"><option value="b7b5a9">Warmgrau</option><option value="aab8a4">Salbei</option><option value="d6c9ae">Sand</option><option value="c9a69a">Terrakotta hell</option><option value="a9b9be">Taubenblau</option><option value="686c6b">Anthrazit</option></select></label>
+<div class="group" aria-label="Küchenboden"><button data-floor="schiefer">Schiefer</button><button data-floor="parkett">Eichenparkett</button></div>
 <div class="group" aria-label="Badboden"><button data-bathfloor="neu">Bad neu</button><button data-bathfloor="bestand">Bad Bestand</button></div>
-<div class="group actions"><a class="control" href="Kueche-Wohnen-3D.html">Zum 3D-Modell</a><button id="reset">Startblick</button><button id="expand" aria-pressed="false">Vollbild</button></div>
+<div class="group actions"><a class="control" id="live" href="Rundgang-Live.html">Live konfigurieren</a><a class="control" href="Kueche-Wohnen-3D.html">Zum 3D-Modell</a><button id="reset">Startblick</button><button id="expand" aria-pressed="false">Vollbild</button></div>
 </nav>
 <div class="stage">
 <canvas tabindex="0" aria-label="360-Grad-Ansicht. Mit Pfeiltasten drehen und mit Plus oder Minus zoomen."></canvas>
@@ -54,8 +53,7 @@ main.expanded{position:fixed;inset:0;z-index:10;width:100vw}
 <footer id="hint">Markierungen anklicken, um weiterzugehen · Ziehen zum Umschauen · Scrollen zum Zoomen</footer>
 </main>
 <script>
-const images={"wohn-holz-schiefer":"pano-wohn-holz-schiefer.jpg","wohn-holz-linoleum":"pano-wohn-holz-linoleum.jpg","wohn-weiss-schiefer":"pano-wohn-weiss-schiefer.jpg","wohn-weiss-linoleum":"pano-wohn-weiss-linoleum.jpg","essen-holz-schiefer":"pano-essen-holz-schiefer.jpg","essen-holz-linoleum":"pano-essen-holz-linoleum.jpg","essen-weiss-schiefer":"pano-essen-weiss-schiefer.jpg","essen-weiss-linoleum":"pano-essen-weiss-linoleum.jpg","kueche-holz-schiefer":"pano-kueche-holz-schiefer.jpg","kueche-holz-linoleum":"pano-kueche-holz-linoleum.jpg","kueche-weiss-schiefer":"pano-kueche-weiss-schiefer.jpg","kueche-weiss-linoleum":"pano-kueche-weiss-linoleum.jpg","flur-holz-schiefer":"pano-flur-holz-schiefer.jpg","flur-holz-linoleum":"pano-flur-holz-linoleum.jpg","flur-weiss-schiefer":"pano-flur-weiss-schiefer.jpg","flur-weiss-linoleum":"pano-flur-weiss-linoleum.jpg","bad-holz-schiefer":"pano-bad-holz-schiefer.jpg","bad-holz-linoleum":"pano-bad-holz-linoleum.jpg","bad-weiss-schiefer":"pano-bad-weiss-schiefer.jpg","bad-weiss-linoleum":"pano-bad-weiss-linoleum.jpg","bad-holz-bestand":"pano-bad-holz-bestand.jpg","bad-weiss-bestand":"pano-bad-weiss-bestand.jpg"};
-const masks={"wohn":"pano-wohn-linoleum-maske.jpg","essen":"pano-essen-linoleum-maske.jpg","kueche":"pano-kueche-linoleum-maske.jpg","flur":"pano-flur-linoleum-maske.jpg","bad":"pano-bad-linoleum-maske.jpg"};
+const images={"wohn-holz-schiefer":"cycles-hd-wohn-holz-schiefer.jpg","wohn-holz-parkett":"cycles-hd-wohn-holz-parkett.jpg","wohn-weiss-schiefer":"cycles-hd-wohn-weiss-schiefer.jpg","wohn-weiss-parkett":"cycles-hd-wohn-weiss-parkett.jpg","essen-holz-schiefer":"cycles-hd-essen-holz-schiefer.jpg","essen-holz-parkett":"cycles-hd-essen-holz-parkett.jpg","essen-weiss-schiefer":"cycles-hd-essen-weiss-schiefer.jpg","essen-weiss-parkett":"cycles-hd-essen-weiss-parkett.jpg","kueche-holz-schiefer":"cycles-hd-kueche-holz-schiefer.jpg","kueche-holz-parkett":"cycles-hd-kueche-holz-parkett.jpg","kueche-weiss-schiefer":"cycles-hd-kueche-weiss-schiefer.jpg","kueche-weiss-parkett":"cycles-hd-kueche-weiss-parkett.jpg","flur-holz-schiefer":"cycles-hd-flur-holz-schiefer.jpg","flur-holz-parkett":"cycles-hd-flur-holz-parkett.jpg","flur-weiss-schiefer":"cycles-hd-flur-weiss-schiefer.jpg","flur-weiss-parkett":"cycles-hd-flur-weiss-parkett.jpg","bad-holz-parkett":"cycles-hd-bad-holz-parkett.jpg","bad-holz-bestand":"cycles-hd-bad-holz-bestand.jpg","bad-holz-schiefer":"cycles-hd-bad-holz-parkett.jpg","bad-weiss-parkett":"cycles-hd-bad-weiss-parkett.jpg","bad-weiss-bestand":"cycles-hd-bad-weiss-bestand.jpg","bad-weiss-schiefer":"cycles-hd-bad-weiss-parkett.jpg"};
 const main=document.querySelector('main'),canvas=document.querySelector('canvas');
 const fallback=document.querySelector('.fallback');
 const gl=canvas.getContext('webgl',{alpha:false,antialias:false});
@@ -98,7 +96,7 @@ function projectMarkers(width,height,scale){
  }
 }
 const maxFov=1.93;
-let room='wohn',finish='holz',floor='schiefer',bathFloor='neu',[yaw,pitch]=starts[room],fov=maxFov,texture,maskTexture,uniforms,last,revision=0;
+let room='wohn',finish='holz',floor='schiefer',bathFloor='neu',[yaw,pitch]=starts[room],fov=maxFov,texture,uniforms,last,revision=0;
 function draw(){
  if(!gl||!texture)return;
  const ratio=Math.min(window.devicePixelRatio||1,2);
@@ -109,9 +107,6 @@ function draw(){
  gl.uniform2f(uniforms.camera,yaw,pitch);
  const width=Math.tan(fov/2);
  gl.uniform2f(uniforms.scale,width,width*h/w);
- const hex=document.querySelector('#linoleum-color').value;
- gl.uniform3f(uniforms.tint,parseInt(hex.slice(0,2),16)/255,parseInt(hex.slice(2,4),16)/255,parseInt(hex.slice(4,6),16)/255);
- gl.uniform1f(uniforms.useTint,floor==='linoleum'?1:0);
  gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
  projectMarkers(w,h,width);
 }
@@ -134,7 +129,7 @@ function select(next,material,heading){
  document.querySelectorAll('[data-finish]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.finish===finish));
  document.querySelectorAll('[data-floor]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.floor===floor));
  document.querySelectorAll('[data-bathfloor]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.bathfloor===bathFloor));
- document.querySelector('#linoleum-color').disabled=floor!=='linoleum';
+ document.querySelector('#live').href='Rundgang-Live.html?room='+room;
  const key=room==='bad'&&bathFloor==='bestand'?'bad-'+finish+'-bestand':room+'-'+finish+'-'+floor;
  const url=images[key],current=++revision;
  if(!gl){fallback.src=url;return;}
@@ -143,18 +138,8 @@ function select(next,material,heading){
    if(current!==revision)return;
    gl.activeTexture(gl.TEXTURE0);
    gl.bindTexture(gl.TEXTURE_2D,texture);
-   gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,pic);
-   if(floor==='linoleum'){
-     const mask=new Image();
-     mask.onload=()=>{
-       if(current!==revision)return;
-       gl.activeTexture(gl.TEXTURE1);
-       gl.bindTexture(gl.TEXTURE_2D,maskTexture);
-       gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,mask);
-       loaded=true;draw();
-     };
-     mask.src=masks[room];
-   }else{loaded=true;draw();}
+   gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,pic);
+   loaded=true;draw();
  };
  pic.src=url;
 }
@@ -168,9 +153,7 @@ if(gl){
  precision highp float;
  varying vec2 screen;
  uniform vec2 camera,scale;
- uniform sampler2D image,mask;
- uniform vec3 tint;
- uniform float useTint;
+ uniform sampler2D image;
  const float pi=3.14159265359;
  void main(){
    float a=camera.x, b=camera.y;
@@ -179,11 +162,7 @@ if(gl){
    vec3 u=vec3(-cos(a)*sin(b),-sin(a)*sin(b),cos(b));
    vec3 d=normalize(f+r*screen.x*scale.x+u*screen.y*scale.y);
    vec2 pos=vec2(fract(atan(d.y,d.x)/(2.*pi)+.5),.5-asin(clamp(d.z,-1.,1.))/pi);
-   vec4 base=texture2D(image,pos);
-   float floorMask=texture2D(mask,pos).r*useTint;
-   vec3 neutral=vec3(.718,.710,.663);
-   vec3 changed=base.rgb*tint/neutral;
-   gl_FragColor=vec4(mix(base.rgb,changed,floorMask),1.);
+   gl_FragColor=texture2D(image,pos);
  }
  `]]){
   const shader=gl.createShader(type);gl.shaderSource(shader,code);gl.compileShader(shader);
@@ -193,17 +172,13 @@ if(gl){
  gl.linkProgram(p);
  if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(p));
  gl.useProgram(p);
- uniforms=Object.fromEntries(['camera','scale','image','mask','tint','useTint'].map(name=>[name,gl.getUniformLocation(p,name)]));
+ uniforms=Object.fromEntries(['camera','scale','image'].map(name=>[name,gl.getUniformLocation(p,name)]));
  gl.uniform1i(uniforms.image,0);
- gl.uniform1i(uniforms.mask,1);
  const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
  const location=gl.getAttribLocation(p,'position');gl.enableVertexAttribArray(location);
  gl.vertexAttribPointer(location,2,gl.FLOAT,false,0,0);
  texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);
- for(const key of [gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T])gl.texParameteri(gl.TEXTURE_2D,key,gl.CLAMP_TO_EDGE);
- for(const key of [gl.TEXTURE_MIN_FILTER,gl.TEXTURE_MAG_FILTER])gl.texParameteri(gl.TEXTURE_2D,key,gl.LINEAR);
- maskTexture=gl.createTexture();gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,maskTexture);
  for(const key of [gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T])gl.texParameteri(gl.TEXTURE_2D,key,gl.CLAMP_TO_EDGE);
  for(const key of [gl.TEXTURE_MIN_FILTER,gl.TEXTURE_MAG_FILTER])gl.texParameteri(gl.TEXTURE_2D,key,gl.LINEAR);
  new ResizeObserver(draw).observe(canvas);
@@ -215,7 +190,6 @@ document.querySelectorAll('[data-room]').forEach(b=>b.onclick=()=>select(b.datas
 document.querySelectorAll('[data-finish]').forEach(b=>b.onclick=()=>select(room,b.dataset.finish));
 document.querySelectorAll('[data-floor]').forEach(b=>b.onclick=()=>{floor=b.dataset.floor;select(room,finish);});
 document.querySelectorAll('[data-bathfloor]').forEach(b=>b.onclick=()=>{bathFloor=b.dataset.bathfloor;select(room,finish);});
-document.querySelector('#linoleum-color').onchange=draw;
 document.querySelector('#reset').onclick=reset;
 const expand=document.querySelector('#expand');
 function fullLabel(){
@@ -256,7 +230,8 @@ canvas.addEventListener('keydown',e=>{
  }
  e.preventDefault();clampPitch();draw();
 });
-select(room,finish);
+const initialRoom=new URLSearchParams(location.search).get('room');
+select(Object.hasOwn(starts,initialRoom)?initialRoom:room,finish);
 </script>
 </body>
 </html>

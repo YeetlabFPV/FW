@@ -35,11 +35,17 @@ canvas{width:100%;height:calc(100dvh - 170px);min-height:360px;display:block;tou
 section:fullscreen{display:flex;flex-direction:column;border:0;border-radius:0;background:#fff}
 section:fullscreen .stage{flex:1;min-height:0}
 section:fullscreen canvas{height:100%;min-height:0}
+[hidden]{display:none!important}
+main[data-mode="walk"] section{min-width:0}
+main[data-mode="walk"]:fullscreen{padding:12px;background:#f4f4ee}
+main[data-mode="walk"]:fullscreen canvas{height:calc(100dvh - 105px)}
+.walk-paths{position:absolute;inset:0;pointer-events:none}
+.walk-paths button{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;border-radius:2em;box-shadow:0 2px 11px #17291f54;background:#fbfcf7f2}
 footer{padding:8px 12px;font-size:13px;color:#4a5b51}
 @media(max-width:780px){main{grid-template-columns:1fr}body{padding:12px}aside{max-height:none}}
 </style>
 <header class="page-header"><h1>Umbau · Küche, Wohnen und Bad</h1><div><a class="control" href="Wohnen-und-Bad-360.html">360°-Rundgang</a> <a class="control" href="index.html">Startseite</a></div></header>
-<main>
+<main data-mode="model">
 <section aria-label="Interaktives 3D-Modell">
 <nav class="toolbar" aria-label="Ansicht"><strong>Blickwinkel</strong>
 <button data-view="Wohnung">Wohnung</button><button data-view="Küche">Küche</button><button data-view="Küchenmasse">Küchenmasse</button><button data-view="Wohnen">Wohnen</button><button data-view="Bad">Bad</button><button data-view="Draufsicht">Draufsicht</button><button id="walls" aria-pressed="true">Wände kürzen</button>
@@ -50,7 +56,7 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
 <aside>
 <h2>Materialien & Farben</h2>
 <p>Jede Möbelgruppe lässt sich unabhängig einstellen. Die Auswahl bleibt beim Wechsel der Ansicht erhalten.</p>
-<p>Der 360°-Rundgang verwendet denselben Raumstand. Hier im 3D-Modell lassen sich zusätzlich alle Möbelfarben unabhängig einstellen.</p>
+<p>Diese Einstellungen stehen auch im konfigurierbaren 360°-Rundgang zur Verfügung.</p>
 <div class="choices" id="choices"></div>
 <details><summary>Planungsangaben</summary>
 <h2>Küche</h2>
@@ -79,31 +85,47 @@ function corners({x,y,z,w,d,h,pivot,angle}){
 },
 hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255)];
 const canvas=document.querySelector('canvas');
+const walking=document.querySelector('main').dataset?.mode==='walk';
 const gl=canvas.getContext('webgl',{antialias:true});
 if(!gl){
   document.querySelector('#status').textContent='Die 3D-Ansicht benötigt WebGL.';
 }else{
+const derivatives=gl.getExtension?.('OES_standard_derivatives');
 const program=gl.createProgram();
 for(const [type,source] of [[gl.VERTEX_SHADER,`
  attribute vec3 point; attribute vec4 material;
  uniform vec3 center,right,up,front;
  uniform vec2 scale;
+ uniform bool perspective;
  varying vec3 shade;
  varying vec2 floorPosition;
  varying float isOak;
  void main(){
    vec3 p=point-center;
-   gl_Position=vec4(dot(p,right)*scale.x,dot(p,up)*scale.y,-dot(p,front)*.045,1.);
+   float depth=dot(p,front);
+   if(perspective)gl_Position=vec4(dot(p,right)*scale.x,dot(p,up)*scale.y,depth*1.004-.051,depth);
+   else gl_Position=vec4(dot(p,right)*scale.x,dot(p,up)*scale.y,-depth*.045,1.);
    shade=material.rgb; floorPosition=material.a>1.5&&material.a<2.5?point.xy:point.yx; isOak=material.a;
  }`],[gl.FRAGMENT_SHADER,`
- precision mediump float;
+ ${derivatives?'#extension GL_OES_standard_derivatives : enable':''}
+ precision highp float;
  varying vec3 shade;
  varying vec2 floorPosition;
  varying float isOak;
  float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+ float noise(vec2 p){
+   vec2 i=floor(p),f=fract(p);
+   f=f*f*(3.-2.*f);
+   return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+1.),f.x),f.y);
+ }
  void main(){
    float grain=1.;
-   if(isOak>3.5){
+   if(isOak>4.5){
+     vec2 p=floorPosition;
+     float seam=smoothstep(.455,.495,abs(fract(p.x/.135)-.5));
+     float band=.06*(hash(vec2(floor(p.x/.135),8.))-.5);
+     grain=1.+band+.06*(noise(p*vec2(170.,4.))-.5)-.31*seam;
+   }else if(isOak>3.5){
      vec2 p=floorPosition*vec2(95.,95.);
      grain=1.+.035*sin(p.x*.16+sin(p.y*.22))+.025*sin(p.y*.31+p.x*.11)+.018*(hash(floor(p))-0.5);
    }else if(isOak>2.5){
@@ -111,14 +133,18 @@ for(const [type,source] of [[gl.VERTEX_SHADER,`
      float cloud=sin(p.x*.20+2.*sin(p.y*.17))*sin(p.y*.29+2.*sin(p.x*.18));
      grain=1.+cloud*.15+sin(p.y*.72+sin(p.x*.33)*2.3)*.048;
    }else if(isOak>.5){
-     vec2 cell=floor(floorPosition*vec2(9.,1.7));
-     vec2 knotCentre=vec2(hash(cell),hash(cell+17.))*.55+.225;
-     vec2 delta=fract(floorPosition*vec2(9.,1.7))-knotCentre;
-     float radius=length(delta*vec2(1.4,2.8));
-     float knot=step(.51,hash(cell+39.))*(1.-smoothstep(.10,.29,radius));
-     float warp=.034*sin(floorPosition.y*17.)+.025*sin(floorPosition.y*39.+floorPosition.x*8.);
-     float lines=sin(floorPosition.x*655.+warp*160.+knot*4.);
-     grain=1.+lines*.026-knot*.31;
+     vec2 p=floorPosition;
+     vec2 cell=floor(p*vec2(5.26,1.65));
+     vec2 delta=fract(p*vec2(5.26,1.65))-vec2(.20+.60*hash(cell),.25+.50*hash(cell+17.));
+     float radius=length(delta*vec2(1.8,3.));
+     float knot=step(.48,hash(cell+39.));
+     float bend=knot*exp(-radius*radius*6.);
+     float wave=noise(p*vec2(8.,2.4))*.32+noise(p*vec2(28.,4.))*.11;
+     float rings=sin(6.283*(p.x*69.+wave*6.+bend*2.8));
+     float pores=noise(p*vec2(370.,48.));
+     float visibility=1.-smoothstep(.0015,.006,${derivatives?'fwidth(p.x)':'0.0015'});
+     grain=1.+.10*(noise(p*vec2(35.,2.))-.5)+visibility*(rings*.05+(pores-.5)*.035)
+         -knot*(.40*exp(-radius*radius*52.)+.12*bend);
    }
    gl_FragColor=vec4(shade*grain,1.);
  }
@@ -141,7 +167,7 @@ for(const [i,name] of ['point','material'].entries()){
  gl.enableVertexAttribArray(slot);
  gl.vertexAttribPointer(slot,i===0?3:4,gl.FLOAT,false,28,12*i);
 }
-const uniforms=Object.fromEntries(['center','right','up','front','scale'].map(name=>[name,gl.getUniformLocation(program,name)]));
+const uniforms=Object.fromEntries(['center','right','up','front','scale','perspective'].map(name=>[name,gl.getUniformLocation(program,name)]));
 const views={
  Wohnung:[4.3,4.55,0,1.08,.60,13.2,0,9],
  Küche:[6.65,3.02,.35,1.08,-.65,4.8,1.73,5.55],
@@ -150,10 +176,23 @@ const views={
  Bad:[6.87,.91,.44,1.27,.35,4.4,0,1.73],
  Draufsicht:[4.3,4.5,0,Math.PI/2,0,10.4,0,9]
 };
+/* WALK_SETTINGS */
+const walkViews=typeof walkSettings==='undefined'?{}:walkSettings;
+const walkRooms=Object.keys(walkViews);
+const routes={
+ wohn:[['essen',7.53,4.85,.79],['flur',4.86,4.20,.83]],
+ essen:[['wohn',5.53,6.19,.72],['kueche',7.93,3.97,.79]],
+ kueche:[['essen',7.90,4.23,.78]],
+ flur:[['wohn',4.86,4.24,.78],['bad',5.43,.60,.91]],
+ bad:[['flur',5.35,.62,.81]]
+};
+let paths=[];
+let ceiling='holz',walkRoom,fieldOfView=1.93;
 let selected='Wohnung', cut=true,floor='slate',longParquet=false,bathTile=false,showDoors=false,count=0, elevation,angle,span,center,near,far;
 function build(){
  const data=[];
- for(const b of model){
+ const ceilingBox={name:'Decke',material:'Holz',wall:false,x:.19,y:.19,z:2.39,w:8.22,d:8.62,h:.075};
+ for(const b of walking?[...model,ceilingBox]:model){
    if(floor!=='slate'&&b.name.startsWith('Schiefer'))continue;
    if(floor!=='linoleum'&&b.name==='Linoleum_Kuechenboden')continue;
    if(b.name==='Parkett_Laengs'&&!longParquet)continue;
@@ -166,15 +205,15 @@ function build(){
    if(h<=0)continue;
    const vertices=corners({...b,y:lo,d:hi-lo,h});
    if(b.material==='Glas' && b.name.endsWith('_Glas') && cut)continue;
-   const color=rgb(materials[b.material]);
+   const color=rgb(b===ceilingBox?(ceiling==='holz'?'#c3a47e':'#eeeae2'):materials[b.material]);
    faces.forEach((face,i)=>{
      const shade=[.75,1,.78,.87,.93,.82][i]*(b.name.endsWith('_Griffmulde')?.60:1);
      for(const index of [0,1,2,0,2,3]){
-       data.push(...vertices[face[index]],...color.map(c=>c*shade),i===1?(b.name==='Parkett_Laengs'?2:b.name==='Eichenparkett_Diele'?1:b.name==='Bad_Bestandsfliese'?3:b.name==='Linoleum_Kuechenboden'?4:0):0);
+       data.push(...vertices[face[index]],...color.map(c=>c*shade),(i===0&&b===ceilingBox&&ceiling==='holz')?5:i===1?(b.name==='Parkett_Laengs'?2:b.name==='Eichenparkett_Diele'?1:b.name==='Bad_Bestandsfliese'?3:b.name==='Linoleum_Kuechenboden'?4:0):0);
      }
    });
  }
- if(selected==='Draufsicht'){
+ if(!walking&&selected==='Draufsicht'){
    const color=rgb(materials.Oeffnungsbereich);
    function swing(x,y,r,start,end){
      const point=(angle,offset)=>[x+(r+offset)*Math.cos(angle),y+(r+offset)*Math.sin(angle),.035];
@@ -203,7 +242,7 @@ function build(){
 const dimensions=document.querySelector('#dimensions');
 const fullscreenButton=document.querySelector('#full');
 fullscreenButton.addEventListener('click',async()=>{
- const section=canvas.closest('section');
+ const section=canvas.closest(walking?'main':'section');
  if(document.fullscreenElement)await document.exitFullscreen();
  else if(section.requestFullscreen)await section.requestFullscreen();
 });
@@ -236,7 +275,27 @@ function draw(){
  if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;}
  gl.viewport(0,0,width,height);
  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+ gl.uniform1i?.(uniforms.perspective,Number(walking));
  const c=Math.cos(angle),s=Math.sin(angle),e=Math.cos(elevation),v=Math.sin(elevation);
+ if(walking){
+   const limit=Math.tan(fieldOfView/2);
+   gl.uniform3fv(uniforms.center,center);
+   gl.uniform3fv(uniforms.right,[-s,c,0]);
+   gl.uniform3fv(uniforms.up,[-c*v,-s*v,e]);
+   gl.uniform3fv(uniforms.front,[c*e,s*e,v]);
+   gl.uniform2f(uniforms.scale,1/limit,width/(height*limit));
+   gl.drawArrays(gl.TRIANGLES,0,count);
+   for(const {marker,target:[x,y,z]} of paths){
+     const dx=x-center[0],dy=y-center[1],dz=z-center[2];
+     const depth=dx*c*e+dy*s*e+dz*v;
+     const u=(-dx*s+dy*c)/(depth*limit);
+     const t=(-dx*c*v-dy*s*v+dz*e)*width/(depth*limit*height);
+     marker.hidden=depth<=0||Math.abs(u)>.85||Math.abs(t)>.85;
+     marker.style.left=(50+50*u)+'%';
+     marker.style.top=(50-50*t)+'%';
+   }
+   return;
+ }
  gl.uniform3fv(uniforms.center,center);
  gl.uniform3fv(uniforms.right,[c,-s,0]);
  gl.uniform3fv(uniforms.up,[-s*v,-c*v,e]);
@@ -254,7 +313,22 @@ function select(name){
  for(const b of buttons)b.setAttribute('aria-pressed',b.dataset.view===selected);
  build();draw();
 }
-buttons.forEach(b=>b.addEventListener('click',()=>select(b.dataset.view)));
+function selectWalk(name){
+ walkRoom=name;
+ const [x,y,yaw,pitch]=walkViews[name];
+ center=[x,y,1.48]; angle=yaw; elevation=pitch; fieldOfView=1.93; near=0; far=9;cut=false;
+ for(const b of buttons)b.setAttribute('aria-pressed',b.dataset.view===name);
+ paths=routes[name].map(([destination,...target])=>{
+   const marker=document.createElement('button');
+   marker.textContent='➜ '+buttons.find(b=>b.dataset.view===destination).textContent;
+   marker.onclick=()=>selectWalk(destination);
+   return {marker,target};
+ });
+ document.querySelector('.walk-paths').replaceChildren(...paths.map(path=>path.marker));
+ document.querySelector('#cycles').href='Wohnen-und-Bad-360.html?room='+name;
+ build();draw();
+}
+buttons.forEach(b=>b.addEventListener('click',()=>walking?selectWalk(b.dataset.view):select(b.dataset.view)));
 document.querySelector('#walls').addEventListener('click',event=>{
  cut=!cut;event.currentTarget.setAttribute('aria-pressed',cut);build();draw();
 });
@@ -267,32 +341,45 @@ const palettes={
  linoleum:{label:'Linoleum Küche',keys:['Linoleum'],values:{'Warmgrau':'#b7b5a9','Salbei':'#aab8a4','Sand':'#d6c9ae','Terrakotta hell':'#c9a69a','Taubenblau':'#a9b9be','Anthrazit':'#686c6b'}}
 };
 const choiceRoot=document.querySelector('#choices');
+const configKey='fw-raum-materialien';
+let preferences={};
+try{preferences=JSON.parse(window.localStorage.getItem(configKey))??{};}catch{}
+
 function chooser(id,label,values,initial,changed,description=''){
  const wrapper=document.createElement('label');wrapper.className='choice';wrapper.textContent=label;
  const select=document.createElement('select');select.id=id;
  for(const [name,value] of Object.entries(values)){
    const option=document.createElement('option');option.value=value;option.textContent=name;select.append(option);
  }
- select.value=initial;
+ const stored=preferences[id];
+ select.value=Object.values(values).includes(stored)?stored:initial;
+ const restored=select.value;
  const row=document.createElement('span');row.className='selectrow';row.append(select);
  if(initial.startsWith('#')){
-   const swatch=document.createElement('span');swatch.className='swatch';swatch.style.backgroundColor=initial;
+   const swatch=document.createElement('span');swatch.className='swatch';swatch.style.backgroundColor=restored;
    select.addEventListener('change',()=>{swatch.style.backgroundColor=select.value;});row.append(swatch);
  }
- select.addEventListener('change',()=>changed(select.value));wrapper.append(row);
+ select.addEventListener('change',()=>{
+   preferences[id]=select.value;
+   try{window.localStorage.setItem(configKey,JSON.stringify(preferences));}catch{}
+   changed(select.value,true);
+ });wrapper.append(row);
  if(description){const small=document.createElement('small');small.textContent=description;wrapper.append(small);}
- choiceRoot.append(wrapper);return select;
+ choiceRoot.append(wrapper);
+ if(restored!==initial)changed(restored,false);
+ return select;
 }
-chooser('floor','Küchenboden',{'Schiefer':'slate','Linoleum':'linoleum','Parkett':'oak'},floor,value=>{floor=value;build();draw();});
+chooser('floor','Küchenboden',{'Schiefer':'slate','Linoleum':'linoleum','Parkett':'oak'},floor,(value,redraw)=>{floor=value;if(redraw){build();draw();}});
 for(const [id,config] of Object.entries(palettes)){
  const initial=materials[config.keys[0]];
- chooser(id,config.label,config.values,initial,value=>{
+ chooser(id,config.label,config.values,initial,(value,redraw)=>{
    for(const key of config.keys)materials[key]=value;
-   build();draw();
+   if(redraw){build();draw();}
  },id==='linoleum'?'Sichtbar bei Küchenboden «Linoleum».':'');
 }
-chooser('parquet','Parkettrichtung',{'Quer':'quer','Längs':'laengs'},'quer',value=>{longParquet=value==='laengs';build();draw();});
-chooser('bath-tile','Badboden',{'Neue Fliesen':'neu','Bestandsfliesen':'bestand'},'neu',value=>{bathTile=value==='bestand';build();draw();});
+chooser('parquet','Parkettrichtung',{'Quer':'quer','Längs':'laengs'},'quer',(value,redraw)=>{longParquet=value==='laengs';if(redraw){build();draw();}});
+if(walking)chooser('ceiling','Decke',{'Holz':'holz','Warmweiss':'weiss'},ceiling,(value,redraw)=>{ceiling=value;if(redraw){build();draw();}});
+chooser('bath-tile','Badboden',{'Neue Fliesen':'neu','Bestandsfliesen':'bestand'},'neu',(value,redraw)=>{bathTile=value==='bestand';if(redraw){build();draw();}});
 document.querySelector('#doors').addEventListener('click',event=>{
  showDoors=!showDoors;event.currentTarget.setAttribute('aria-pressed',showDoors);build();draw();
 });
@@ -301,11 +388,15 @@ canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);
 canvas.addEventListener('pointermove',e=>{
  if(!last||selected==='Küchenmasse')return;
  angle-=(e.clientX-last[0])*.009;
- elevation=Math.max(.12,Math.min(Math.PI/2,elevation+(e.clientY-last[1])*.009));
+ elevation=Math.max(walking?-1.55:.12,Math.min(1.55,elevation+(e.clientY-last[1])*.009));
  last=[e.clientX,e.clientY];draw();
 });
 for(const name of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(name,()=>{last=null;});
-function zoom(factor){span=Math.min(24,Math.max(1.5,span*factor));draw();}
+function zoom(factor){
+ if(walking)fieldOfView=Math.min(1.93,Math.max(.40,fieldOfView*factor));
+ else span=Math.min(24,Math.max(1.5,span*factor));
+ draw();
+}
 canvas.addEventListener('wheel',e=>{e.preventDefault();zoom(Math.exp(Math.sign(e.deltaY)*.12));},{passive:false});
 canvas.addEventListener('keydown',e=>{
  if(selected==='Küchenmasse'&&e.key.startsWith('Arrow'))return;
@@ -315,12 +406,16 @@ canvas.addEventListener('keydown',e=>{
  case 'ArrowLeft':angle+=.15;break;
  case 'ArrowRight':angle-=.15;break;
  case 'ArrowUp':elevation=Math.min(Math.PI/2,elevation+.12);break;
- case 'ArrowDown':elevation=Math.max(.12,elevation-.12);break;
+ case 'ArrowDown':elevation=Math.max(walking?-1.55:.12,elevation-.12);break;
  default:return;
  }
  e.preventDefault();draw();
 });
 new ResizeObserver(draw).observe(canvas);
-select('Wohnung');
+if(walking){
+ const requested=new URLSearchParams(location.search).get('room');
+ selectWalk(walkRooms.includes(requested)?requested:'wohn');
+ document.querySelector('#reset-walk').onclick=()=>selectWalk(walkRoom);
+}else select('Wohnung');
 }
 </script>
