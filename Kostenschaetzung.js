@@ -227,14 +227,72 @@ function record(row){
   return state.rows[row.id]??={};
 }
 
+const scopeOptions={unknown:'Noch offen',retain:'Bestand behalten',renew:'Erneuern'};
+const connectionOptions={unknown:'Noch offen',retain:'Am gleichen Ort',move:'Versetzen'};
+const questions=[
+  ['kitchen','Küche insgesamt',{unknown:'Noch offen',retain:'Kein Küchenumbau',renew:'Küche umbauen'}],
+  ['cabinets','Küchenmöbel',scopeOptions],
+  ['top','Küchenarbeitsplatte',scopeOptions],
+  ['kitchenFloor','Küchenboden',scopeOptions],
+  ['kitchenWater','Wasseranschlüsse Küche',connectionOptions],
+  ['bath','Bad insgesamt',{unknown:'Noch offen',retain:'Kein Badumbau',renew:'Bad umbauen'}],
+  ['bathWater','Sanitäranschlüsse Bad',connectionOptions],
+  ['bathFloor','Badboden ausserhalb der Dusche',{...scopeOptions,coat:'Geeigneten Bestand beschichten'}],
+  ['bathWalls','Badseitenwände',{...scopeOptions,coat:'Bestandsplättli übermalen'}],
+  ['fixtures','WC, Lavabo und Unterschrank',scopeOptions],
+  ['bathShower','Duschplatz, Glas und Armatur',scopeOptions],
+  ['looseFurniture','Lose Möbel',{unknown:'Einzeln in der Schätzung festlegen',retain:'Alle vorhandenen Möbel behalten',renew:'Möbel gemäss Modell neu anschaffen'}],
+  ['parquet','Parkett',{...scopeOptions,sand:'Bestand schleifen und versiegeln'}],
+  ['parquetArea','Parkettfläche in m²'],
+  ['paintArea','Zu streichende Fläche in m²'],
+  ['spotCount','Anzahl neue Deckenspots']
+];
+const queryAnswers=()=>state.questionnaire??{};
+let questionnaireEffects=new Map();
+function calculateQuestionnaire(){
+  const answers=queryAnswers();
+  const effects=new Map();
+  const set=(id,values)=>effects.set(id,{...effects.get(id),...values});
+  const scope=(key,id,option)=>{
+    if(answers[key]==='retain')set(id,{active:false});
+    if(answers[key]==='renew')set(id,{active:true});
+    if(answers[key]==='coat'||answers[key]==='sand')set(id,{variant:option});
+  };
+  scope('top','k-top');
+  scope('kitchenFloor','k-floor');
+  scope('bathWalls','b-walls','coated');
+  scope('bathFloor','b-floor','coated');
+  scope('parquet','i-parquet','sand');
+  if(answers.bathFloor==='renew'&&configuration.selections['bath-tile']==='bestand')set('b-floor',{variant:'neu'});
+  if(answers.cabinets==='retain')for(const id of ['k-cabinets','k-demo'])set(id,{active:false});
+  if(answers.kitchenWater==='retain'||answers.kitchenWater==='move')
+    set('k-water',{variant:answers.kitchenWater==='move'?'move':'standard'});
+  if(answers.bathWater==='retain'||answers.bathWater==='move')
+    set('b-water',{variant:answers.bathWater==='retain'?'partial':'standard'});
+  if(answers.fixtures==='retain')for(const id of ['b-wc','b-basin','b-cabinet'])set(id,{active:false});
+  if(answers.bathShower==='retain')for(const id of ['b-shower','b-glass','b-tap'])set(id,{active:false});
+  for(const [name,id] of [['parquetArea','i-parquet'],['paintArea','i-paint'],['spotCount','e-spots']]){
+    if(typeof answers[name]!=='number')continue;
+    set(id,{quantity:answers[name]});
+    if(name==='spotCount'&&answers[name]===0)set('e-controls',{active:false});
+  }
+  for(const row of rows){
+    if(['kitchen','bath'].includes(row.category)&&answers[row.category]==='retain')set(row.id,{active:false});
+    if(row.category==='furniture'&&answers.looseFurniture==='retain')set(row.id,{active:false});
+  }
+  return effects;
+}
+questionnaireEffects=calculateQuestionnaire();
+
 function rowSettings(row){
   if(!row.variants)return {active:row.active, quantity:validNumber(row.quantity), unit:row.unit, low:validNumber(row.low), high:validNumber(row.high),quote:row.quote};
   const stored=record(row);
-  const suggested=modelVariant(row);
-  const variant=[stored.variant,suggested].find(key=>Object.hasOwn(row.variants,key))??Object.keys(row.variants)[0];
+  const suggested=modelVariant(row), answer=questionnaireEffects.get(row.id);
+  const quotedVariant=answer&&Object.keys(stored.prices??{}).find(id=>stored.prices[id].quote!=null);
+  const variant=[stored.variant,quotedVariant,answer?.variant,suggested].find(key=>Object.hasOwn(row.variants,key))??Object.keys(row.variants)[0];
   const reference=row.variants[variant], overrides=stored.prices?.[variant];
   const defaultQuantity=row.category==='furniture'?(furnitureQuantities[row.id]??0):row.quantity;
-  return {active:stored.active??!['heating','tv','laptop'].includes(row.id),quantity:validNumber(stored.quantity??defaultQuantity),
+  return {active:stored.active??(overrides?.quote!=null?true:answer?.active??!['heating','tv','laptop'].includes(row.id)),quantity:validNumber(stored.quantity??answer?.quantity??defaultQuantity),
     unit:row.unit, variant, low:validNumber(overrides?.low??reference.low),high:validNumber(overrides?.high??reference.high),quote:overrides?.quote};
 }
 
@@ -383,6 +441,46 @@ function render(){
   totals();
 }
 
+const questionFields=$('questionnaire-fields');
+for(const [key,label,options] of questions){
+  const wrapper=element('label',label);
+  const field=element(options?'select':'input');
+  field.name=key;
+  if(options){
+    for(const [value,name] of Object.entries(options))field.add(new Option(name,value));
+    field.value=queryAnswers()[key]??'unknown';
+  }else{
+    field.type='number';
+    field.min='0';
+    field.step=key==='spotCount'?'1':'0.01';
+    field.placeholder='Noch offen';
+    field.value=queryAnswers()[key]??'';
+  }
+  wrapper.append(field);
+  questionFields.append(wrapper);
+}
+function applyQuestionnaire(message){
+  questionnaireEffects=calculateQuestionnaire();
+  render();
+  save();
+  $('questionnaire-status').textContent=message;
+}
+$('questionnaire-form').onsubmit=event=>{
+  event.preventDefault();
+  const fields=new FormData(event.currentTarget);
+  state.questionnaire={};
+  for(const [key,,options] of questions){
+    const value=fields.get(key);
+    if(value!==''&&value!=='unknown')state.questionnaire[key]=options?value:validNumber(value);
+  }
+  applyQuestionnaire('Antworten gespeichert und in der Schätzung berücksichtigt.');
+};
+$('questionnaire-reset').onclick=()=>{
+  delete state.questionnaire;
+  $('questionnaire-form').reset();
+  applyQuestionnaire('Antworten zurückgesetzt. Manuelle Eingaben bleiben erhalten.');
+};
+
 for(const key of ['planning','reserve']){
   $(key).value=validNumber(state[key]);
   $(key).oninput=()=>{state[key]=validNumber($(key).value);totals();save();};
@@ -390,6 +488,7 @@ for(const key of ['planning','reserve']){
 $('save').onclick=()=>save('Kostenschätzung gespeichert.');
 $('sync').onclick=()=>{
   configuration=modelConfiguration();
+  questionnaireEffects=calculateQuestionnaire();
   furnitureQuantities=inventoryQuantities(configuration);
   for(const row of rows){
     if(modelVariant(row))delete record(row).variant;
