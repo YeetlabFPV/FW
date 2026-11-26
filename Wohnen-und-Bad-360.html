@@ -33,6 +33,8 @@ footer{font-size:.82rem;color:#53645a;padding:7px 12px}
 main:fullscreen,main.expanded{height:100dvh;border:0;border-radius:0}
 main.expanded{position:fixed;inset:0;z-index:10;width:100vw}
 @media(max-width:620px){body{padding:8px}main{height:calc(100dvh - 90px)}nav{gap:5px;font-size:13px}.actions{margin-left:0}}
+#blender-variant{font:inherit;color:inherit;background:#fafbf8;border:1px solid #cad6cb;border-radius:8px;padding:6px}
+[data-base-options][hidden],#panorama-file[hidden]{display:none}
 </style>
 </head>
 <body>
@@ -40,10 +42,17 @@ main.expanded{position:fixed;inset:0;z-index:10;width:100vw}
 <main>
 <nav aria-label="Panorama einstellen">
 <div class="group" aria-label="Raum"><button data-room="wohn">Stube</button><button data-room="essen">Essplatz</button><button data-room="kueche">Küche</button><button data-room="flur">Flur</button><button data-room="bad">Bad</button></div>
-<div class="group" aria-label="Decke"><button data-finish="holz">Holzdecke</button><button data-finish="weiss">Warmweisse Decke</button></div>
-<div class="group" aria-label="Küchenboden"><button data-floor="schiefer">Schiefer</button><button data-floor="parkett">Eichenparkett</button></div>
-<div class="group" aria-label="Badboden"><button data-bathfloor="neu">Bad neu</button><button data-bathfloor="bestand">Bad Bestand</button></div>
-<div class="group actions"><a class="control" id="live" href="Rundgang-Live.html">Live konfigurieren</a><a class="control" href="Kueche-Wohnen-3D.html">Zum 3D-Modell</a><button id="reset">Startblick</button><button id="expand" aria-pressed="false">Vollbild</button></div>
+<div class="group"><label>Blender-Variante <select id="blender-variant">
+<option value="bisher">Bisheriger Entwurf</option>
+<option value="taubenblau">Taubenblau · erster Entwurf</option>
+<option value="rekonstruiert">Taubenblau · rekonstruiert</option>
+<option value="flieder">Taubenblau · Fliederbad</option>
+<option value="taubenblau-2">Taubenblau · Stein · Nebelblau 2</option>
+</select></label></div>
+<div class="group" aria-label="Decke" data-base-options><button data-finish="holz">Holzdecke</button><button data-finish="weiss">Warmweisse Decke</button></div>
+<div class="group" aria-label="Küchenboden" data-base-options><button data-floor="schiefer">Schiefer</button><button data-floor="parkett">Eichenparkett</button></div>
+<div class="group" aria-label="Badboden" data-base-options><button data-bathfloor="neu">Bad neu</button><button data-bathfloor="bestand">Bad Bestand</button></div>
+<div class="group actions"><a class="control" id="live" href="Rundgang-Live.html">Live konfigurieren</a><a class="control" href="Kueche-Wohnen-3D.html">Zum 3D-Modell</a><a class="control" id="panorama-file" hidden target="_blank" rel="noopener">4K-Panorama öffnen</a><button id="reset">Startblick</button><button id="expand" aria-pressed="false">Vollbild</button></div>
 </nav>
 <div class="stage">
 <canvas tabindex="0" aria-label="360-Grad-Ansicht. Mit Pfeiltasten drehen und mit Plus oder Minus zoomen."></canvas>
@@ -68,6 +77,11 @@ const routes={
  bad:[['flur',5.35,.62,.81]]
 };
 const hotspots=document.querySelector('.hotspots');
+const variantMenu=document.querySelector('#blender-variant');
+const variantIds=new Set([...variantMenu.options].map(option=>option.value));
+const initialVariant=new URLSearchParams(location.search).get('variante');
+let variant=variantIds.has(initialVariant)?initialVariant:'bisher';
+variantMenu.value=variant;
 let markers=[],loaded=false;
 function makeMarkers(){
  const names=Object.fromEntries([...document.querySelectorAll('[data-room]')].map(b=>[b.dataset.room,b.textContent]));
@@ -109,7 +123,7 @@ function draw(){
  const width=Math.tan(fov/2);
  gl.uniform2f(uniforms.scale,width,width*h/w);
  const stockKey='bad-'+finish+'-bestand';
- gl.uniform1i(uniforms.showBlue,Number(room==='bad'&&bathFloor==='bestand'&&!currentImages[stockKey]&&canPreviewStock()));
+ gl.uniform1i(uniforms.showBlue,Number(variant==='bisher'&&room==='bad'&&bathFloor==='bestand'&&!currentImages[stockKey]&&canPreviewStock()));
  gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
  projectMarkers(w,h,width);
 }
@@ -136,6 +150,12 @@ function select(next,material,heading){
  if(moved||!markers.length)makeMarkers();
  for(const {button} of markers)button.hidden=true;
  finish=material;
+ if(variant!=='bisher'){
+   const shareUrl=new URL(location.href);
+   shareUrl.searchParams.set('variante',variant);
+   shareUrl.searchParams.set('room',room);
+   history.replaceState(null,'',shareUrl);
+ }
  const bathPair=hasStockRender()||canPreviewStock();
  if(!bathPair&&bathFloor==='bestand')bathFloor='neu';
  document.querySelector('[data-bathfloor="bestand"]').textContent=bathPair?'Bad Bestand':'Bestandsboden live';
@@ -146,9 +166,14 @@ function select(next,material,heading){
  document.querySelector('#live').href='Rundgang-Live.html?room='+room+(room==='bad'?'&bath='+bathFloor:'');
  const stock=room==='bad'&&bathFloor==='bestand';
  const key=stock&&hasStockRender()?'bad-'+finish+'-bestand':room+'-'+finish+'-'+floor;
- const url=images[key],current=++revision;
+ document.querySelectorAll('[data-base-options]').forEach(group=>{group.hidden=variant!=='bisher';});
+ const url=variant==='bisher'?images[key]:`Varianten/${variant}/${room}.jpg`;
+ const panoramaFile=document.querySelector('#panorama-file');
+ panoramaFile.hidden=variant==='bisher';
+ panoramaFile.href=url;
+ const current=++revision;
  const badge=document.querySelector('#render-state');
- const status=stock&&!hasStockRender()?'Blender-Cycles · 4K · blaue Fliesen als Vorschau':
+ const status=variant!=='bisher'?variantMenu.selectedOptions[0].textContent+' · Blender-Cycles · 4K':stock&&!hasStockRender()?'Blender-Cycles · 4K · blaue Fliesen als Vorschau':
    currentImages[key]?'Blender-Cycles · aktueller Entwurf · 4K':'Blender-Cycles · früherer Entwurfsstand';
  badge.textContent='Panorama lädt …';
  if(!gl){fallback.src=url;badge.textContent=status;return;}
@@ -292,6 +317,15 @@ canvas.addEventListener('keydown',e=>{
  default:return;
  }
  e.preventDefault();clampPitch();draw();
+});
+variantMenu.addEventListener('change',()=>{
+ variant=variantMenu.value;
+ const url=new URL(location.href);
+ if(variant==='bisher')url.searchParams.delete('variante');
+ else url.searchParams.set('variante',variant);
+ url.searchParams.set('room',room);
+ history.replaceState(null,'',url);
+ select(room,finish);
 });
 const initialRoom=new URLSearchParams(location.search).get('room');
 select(Object.hasOwn(starts,initialRoom)?initialRoom:room,finish);
