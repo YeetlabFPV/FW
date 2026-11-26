@@ -6,3 +6,5 @@ Bei einer neu eingereichten Variante die Konfiguration in Blender übernehmen, d
 - Equirektangulare 4K-JPEGs mit 4096 × 2048 Pixeln als `wohn.jpg`, `essen.jpg`, `kueche.jpg`, `flur.jpg` und `bad.jpg`.
 - Die Variante im Menü `blender-variant` in `Wohnen-und-Bad-360.html` ergänzen. Blender-Kamera und Panoramarichtung für jeden Standpunkt prüfen.
 - Die Assets zusammen mit der Menüänderung auf GitHub Pages veröffentlichen und jeden Standpunkt prüfen.
+
+Wenn die Blender-Szene auch frei begehbar sein soll, die GLB-Datei und Raumdaten für dieselbe Varianten-ID in die Blender-Begehung aufnehmen. Erst dann die Option im Menü mit `data-walk` markieren.

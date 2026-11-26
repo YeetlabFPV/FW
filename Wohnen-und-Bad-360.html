@@ -43,15 +43,15 @@ main.expanded{position:fixed;inset:0;z-index:10;width:100vw}
 <header><h1>Blender-Ansichten (360°)</h1><small id="render-state" role="status">Blender-Cycles</small></header>
 <main>
 <nav class="project-nav" aria-label="Seitennavigation"><a href="index.html" data-project="start">Startseite</a> <a href="Wohnen-und-Bad-360.html" data-project="blender" aria-current="page">Blender-Ansichten (360°)</a> <a href="Kueche-Wohnen-3D.html" data-project="model">3D-Konfigurator</a> <a href="Kueche-Wohnen-3D.html?modus=begehen" data-project="walk">Begehung</a> <a href="Kostenschaetzung.html" data-project="cost">Kostenschätzung</a></nav>
-<p class="view-help">Wechsle zwischen festen Standpunkten oder öffne die <a id="blender-walk" href="Begehung-Taubenblau-2/">Blender-Begehung · Taubenblau 2</a>, um diese Variante frei zu erkunden.</p>
+<p class="view-help"><a id="blender-walk" hidden href="Begehung-Taubenblau-2/">Ausgewählte Variante frei begehen</a><span id="blender-walk-unavailable">Für den bisherigen Entwurf liegen die 360°-Panoramen vor.</span></p>
 <nav aria-label="Panorama einstellen">
 <div class="group" aria-label="Raum"><button data-room="wohn">Stube</button><button data-room="essen">Essplatz</button><button data-room="kueche">Küche</button><button data-room="flur">Flur</button><button data-room="bad">Bad</button></div>
 <div class="group"><label>Blender-Variante <select id="blender-variant">
 <option value="bisher">Bisheriger Entwurf</option>
-<option value="taubenblau">Taubenblau · erster Entwurf</option>
-<option value="rekonstruiert">Taubenblau · rekonstruiert</option>
-<option value="flieder">Taubenblau · Fliederbad</option>
-<option value="taubenblau-2">Taubenblau · Stein · Nebelblau 2</option>
+<option value="taubenblau" data-walk>Taubenblau · erster Entwurf</option>
+<option value="rekonstruiert" data-walk>Taubenblau · rekonstruiert</option>
+<option value="flieder" data-walk>Taubenblau · Fliederbad</option>
+<option value="taubenblau-2" data-walk>Taubenblau · Stein · Nebelblau 2</option>
 </select></label></div>
 <div class="group" aria-label="Decke" data-base-options><button data-finish="holz">Holzdecke</button><button data-finish="weiss">Warmweisse Decke</button></div>
 <div class="group" aria-label="Küchenboden" data-base-options><button data-floor="schiefer">Schiefer</button><button data-floor="parkett">Eichenparkett</button></div>
@@ -168,7 +168,11 @@ function select(next,material,heading){
  document.querySelectorAll('[data-floor]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.floor===floor));
  document.querySelectorAll('[data-bathfloor]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.bathfloor===bathFloor));
  document.querySelectorAll('[data-project="walk"]').forEach(link=>{link.href='Kueche-Wohnen-3D.html?modus=begehen&raum='+room;});
- document.querySelector('#blender-walk').href='Begehung-Taubenblau-2/?raum='+room;
+ const blenderWalk=document.querySelector('#blender-walk');
+ const available=variantMenu.selectedOptions[0].hasAttribute('data-walk');
+ blenderWalk.hidden=!available;
+ document.querySelector('#blender-walk-unavailable').hidden=available;
+ if(available)blenderWalk.href='Begehung-Taubenblau-2/?'+new URLSearchParams({variante:variant,raum:room});
  const stock=room==='bad'&&bathFloor==='bestand';
  const key=stock&&hasStockRender()?'bad-'+finish+'-bestand':room+'-'+finish+'-'+floor;
  document.querySelectorAll('[data-base-options]').forEach(group=>{group.hidden=variant!=='bisher';});
