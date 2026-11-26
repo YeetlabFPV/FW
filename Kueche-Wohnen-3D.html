@@ -461,7 +461,112 @@ const bathFloorTiles={sand:33,slate:34,terracotta:35,white:36,terrazzo:44};
 const wallFinishOptions={'Einfarbig':'paint','Nebelblau · schmale Fliesen':'blue','Petrol · glasierte Stäbchen':'petrol','Waldgrün · versetzte Fliesen':'green','Blau · quadratische Fliesen':'square'};
 const linoPatterns={smooth:28,clouded:29,hex:30,speckled:31};
 let builtinsHandle='none',chairStyle='shell',coffeeStyle='wood';
-const defaultWardrobeWidths={main:'100',second:'100',entry:'200'};
+const defaultConfiguration={
+ "layout": {
+  "bed-main": {
+   "dx": -0.4444173328668466,
+   "dy": -0.01142745685987882,
+   "angle": 0
+  },
+  "wardrobe-main": {
+   "dx": 0.020526905868787138,
+   "dy": -0.5079763702340228,
+   "angle": 0
+  },
+  "desk": {
+   "dx": 1.6562243735262157,
+   "dy": 1.2449923434520804,
+   "angle": -1.5707963267948963
+  },
+  "dining": {
+   "dx": 0,
+   "dy": -0.14536664156134727,
+   "angle": 0
+  },
+  "sofa": {
+   "dx": 0.014394654115534422,
+   "dy": 0.21882456256348437,
+   "angle": 0
+  },
+  "coffee": {
+   "dx": 0.27562857880415237,
+   "dy": 0.12690533628313005,
+   "angle": 0
+  },
+  "bed-second": {
+   "dx": -0.699929226475279,
+   "dy": -0.0015679824561409816,
+   "angle": 0
+  },
+  "night-right": {
+   "dx": -0.6930093700159488,
+   "dy": -0.10159489633173795,
+   "angle": 0
+  },
+  "night-main-right": {
+   "dx": -0.4627266562044463,
+   "dy": -0.06771245707563445,
+   "angle": 0
+  },
+  "night-main-left": {
+   "dx": -0.36948137268261894,
+   "dy": -0.061095104108051856,
+   "angle": 0
+  },
+  "wardrobe-second": {
+   "dx": 1.892513511619228,
+   "dy": 0.01922707626173263,
+   "angle": -1.1102230246251565e-16
+  },
+  "extra-96be8547-8041-4cfe-aef6-cf3bec682727": {
+   "dx": -0.6092739483652314,
+   "dy": -0.10182909688995179,
+   "angle": 0
+  }
+ },
+ "wardrobeWidths": {
+  "main": "100",
+  "second": "100",
+  "entry": "200"
+ },
+ "furniture": {
+  "removed": [
+   "fold-entry",
+   "night-left"
+  ],
+  "added": [
+   [
+    "extra-96be8547-8041-4cfe-aef6-cf3bec682727",
+    "night-left"
+   ]
+  ]
+ },
+ "selections": {
+  "floor": "slate",
+  "kitchen": "#b4c4d9",
+  "bath": "#a8bbc4",
+  "bathWalls": "#ffffff",
+  "bathWall": "#c0cfbb",
+  "sideboard": "#b7abc7",
+  "sofa": "#9baeba",
+  "builtins": "#939e95",
+  "linoleum": "#d6c9ae",
+  "worktop": "current",
+  "showerFinish": "blue",
+  "sideWallFinish": "paint",
+  "showerGlass": "clear",
+  "linoFinish": "fine",
+  "kitchenHandle": "#d8b58d",
+  "bathHandle": "#798589",
+  "builtinsHandle": "wood",
+  "chairStyle": "shell",
+  "coffeeStyle": "wood",
+  "foldBed": "closed",
+  "parquet": "laengs",
+  "bath-tile": "neu"
+ }
+};
+const defaultWardrobeWidths=defaultConfiguration.wardrobeWidths;
 const wardrobeWidths={...defaultWardrobeWidths};
 let foldState='closed';
 let showDoorFrames=true,showWindows=true;
@@ -594,8 +699,8 @@ const furnitureGroups=new Map([
 const furnitureIdByPiece=new Map([...furnitureGroups].flatMap(([id,group])=>group.pieces.map(piece=>[piece,id])));
 const furnitureWalls=model.filter(b=>b.wall&&b.z<.2);
 const furnitureKey='fw-moebelpositionen-v1';
-let furniturePositions={};
-try{furniturePositions=JSON.parse(localStorage.getItem(furnitureKey))??{};}catch{}
+let furniturePositions={...defaultConfiguration.layout};
+try{furniturePositions=JSON.parse(localStorage.getItem(furnitureKey))??furniturePositions;}catch{}
 const defaultPosition={dx:0,dy:0,angle:0};
 const furnitureInventoryKey='fw-moebelliste-v1';
 const furnitureCatalog=new Map(furnitureGroups);
@@ -630,7 +735,9 @@ function loadFurnitureInventory(inventory){
 function furnitureInventory(){
  return {removed:[...removedFurniture],added:[...addedFurniture]};
 }
-try{loadFurnitureInventory(JSON.parse(localStorage.getItem(furnitureInventoryKey)??'null'));}catch{}
+let initialInventory=defaultConfiguration.furniture;
+try{initialInventory=JSON.parse(localStorage.getItem(furnitureInventoryKey))??initialInventory;}catch{}
+loadFurnitureInventory(initialInventory);
 const activeFurniture=(b,id)=>(!b.wardrobe||b.width===(furnitureGroups.get(id)?.wardrobeWidth??wardrobeWidths[b.wardrobe]))&&(!b.fold||b.fold===foldState);
 function furnitureBounds(id){
  const pieces=furnitureGroups.get(id).pieces.filter(b=>activeFurniture(b,id));
@@ -1331,7 +1438,7 @@ function chooser(id,label,values,initial,changed,description=''){
    const option=document.createElement('option');option.value=value;option.textContent=name;select.append(option);
  }
  const updatedValue=value=>id==='kitchen'&&value==='#a4b8bf'?'#b4c4d9':value;
- const stored=updatedValue(preferences[id]);
+ const stored=updatedValue(preferences[id]??defaultConfiguration.selections[id]);
  select.value=Object.values(values).includes(stored)?stored:initial;
  const restored=select.value;
  const row=document.createElement('span');row.className='selectrow';row.append(select);
@@ -1676,7 +1783,9 @@ placementRemove.onclick=()=>{
 document.querySelector('#rotate-left').onclick=()=>rotateFurniture(-1);
 document.querySelector('#rotate-right').onclick=()=>rotateFurniture(1);
 document.querySelector('#placement-reset').onclick=()=>{
- delete furniturePositions[placementItem.value];
+ const id=placementItem.value,position=defaultConfiguration.layout[id];
+ if(position&&fitsFurniture(id,position))furniturePositions[id]=position;
+ else delete furniturePositions[id];
  saveFurniturePositions();build();draw();
  placementMessage.textContent='Position zurückgesetzt.';
 };
