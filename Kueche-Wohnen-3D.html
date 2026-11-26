@@ -510,11 +510,12 @@ function furnishBedrooms(){
    part('Bettdecke',.01,.51,.48,1.58,1.485,.085,'duvet',.033);
    for(const u of [.14,.86])part('Kissen',u,.13,.487,.60,.37,.105,'pillow',.049);
  }
- function wardrobe(room,id,x,y,facesWest){
+ function wardrobe(room,id,x,y,facing){
    for(const width of [1,2]){
      const offset=(2-width)/2;
      const part=(name,u,v,z,w,d,h,finish,rounding)=>{
-       if(facesWest)place(room+' · '+name,x+.60-v-d,y+u+offset,z,d,w,h,finish,rounding);
+       if(facing==='west')place(room+' · '+name,x+.60-v-d,y+u+offset,z,d,w,h,finish,rounding);
+       else if(facing==='north')place(room+' · '+name,x+u+offset,y+.60-v-d,z,w,d,h,finish,rounding);
        else place(room+' · '+name,x+u+offset,y+v,z,w,d,h,finish,rounding);
        Object.assign(model.at(-1),{wardrobe:id,width:String(width*100)});
      };
@@ -526,22 +527,24 @@ function furnishBedrooms(){
    }
  }
  bed('Schlafzimmer 2',1.43,5.47,false);
- wardrobe('Schlafzimmer 2','main',3.61,5.42,true);
- bed('Schlafzimmer 1',.245,3.30,true);
- wardrobe('Schlafzimmer 1','second',.26,2.25,false);
- wardrobe('Zimmer Eingang','entry',.37,.215,false);
- function sideTable(id,y){
-   const part=(name,x,y,z,w,d,h,finish)=>{
-     place(name,x,y,z,w,d,h,finish);
+ wardrobe('Schlafzimmer 2','main',3.61,5.42,'west');
+ bed('Schlafzimmer 1',1.65,2.285,false);
+ wardrobe('Schlafzimmer 1','second',.32,4.65,'north');
+ wardrobe('Zimmer Eingang','entry',.37,.215);
+ function sideTable(id,x,y){
+   const part=(name,u,v,z,w,d,h,finish)=>{
+     place(name,x+u,y+v,z,w,d,h,finish);
      model.at(-1).nightstand=id;
    };
-   part('Beistelltisch · Korpus',.245,y,.115,.32,.30,.348,'wardrobe');
-   part('Beistelltisch · Front',.551,y+.012,.135,.022,.276,.245,'wardrobe');
-   for(const x of [.269,.503])for(const yy of [y+.024,y+.224])
-     part('Beistelltisch · Holzbein',x,yy,.016,.052,.052,.11,'pine');
+   part('Beistelltisch · Korpus',0,0,.115,.32,.30,.348,'wardrobe');
+   part('Beistelltisch · Front',.012,.295,.135,.296,.022,.245,'wardrobe');
+   for(const u of [.024,.244])for(const v of [.024,.224])
+     part('Beistelltisch · Holzbein',u,v,.016,.052,.052,.11,'pine');
  }
- sideTable('left',2.985);
- sideTable('right',4.956);
+ sideTable('left',1.26,2.32);
+ sideTable('right',3.33,2.32);
+ sideTable('main-left',1.04,5.48);
+ sideTable('main-right',3.11,5.48);
  function foldPart(name,x,y,z,w,d,h,finish,state){
    place('Klappbett · '+name,x,y,z,w,d,h,finish);
    model.at(-1).fold=state;
@@ -580,6 +583,8 @@ const furnitureGroups=new Map([
  ['fold-entry',['Klappbett · Zimmer Eingang',b=>b.name.startsWith('Klappbett · ')]],
  ['night-left',['Beistelltisch links · Schlafzimmer 1',b=>b.nightstand==='left']],
  ['night-right',['Beistelltisch rechts · Schlafzimmer 1',b=>b.nightstand==='right']],
+ ['night-main-left',['Beistelltisch links · Schlafzimmer 2',b=>b.nightstand==='main-left']],
+ ['night-main-right',['Beistelltisch rechts · Schlafzimmer 2',b=>b.nightstand==='main-right']],
  ['desk',['Pult mit Laptop und Lampe',b=>/^(Pult|Laptop)/.test(b.name)]],
  ['coffee',['Couchtisch',b=>b.name.startsWith('Couchtisch_')]],
  ['sofa',['Sofa',b=>b.name.startsWith('Sofa_')]],
@@ -604,7 +609,7 @@ const furnitureTypes=new Map([
  ['bed-main',{label:'Bett',sources:['bed-main','bed-second']}],
  ...['wardrobe-small','wardrobe-large'].map(id=>[id,{label:furnitureCatalog.get(id).label,sources:[id]}]),
  ['fold-entry',{label:'Klappbett',sources:['fold-entry']}],
- ['night-left',{label:'Beistelltisch',sources:['night-left','night-right']}],
+ ['night-left',{label:'Beistelltisch',sources:['night-left','night-right','night-main-left','night-main-right']}],
  ...['desk','coffee','sofa','dining','tv'].map(id=>[id,{label:furnitureCatalog.get(id).label,sources:[id]}])
 ]);
 let removedFurniture=new Set(),addedFurniture=new Map();
