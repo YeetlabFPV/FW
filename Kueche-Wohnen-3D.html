@@ -123,6 +123,9 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
 <aside>
 <h2>Materialien & Farben</h2>
 <p>Jede Möbelgruppe lässt sich unabhängig einstellen. Die Auswahl bleibt beim Wechsel der Ansicht erhalten.</p>
+
+<p class="preset-suggestion">Preis pro Auswahl im Vergleich · $ günstig · $$ mittel · $$$ höherpreisig</p>
+<div class="choices" id="choices"></div>
 <details class="presets" open>
 <summary>Designs</summary>
 <form class="preset-controls" id="preset-form">
@@ -134,9 +137,8 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
 <fieldset id="design-identity" hidden style="margin:0;border:1px solid #c4cfc4;border-radius:8px"><legend>Beim ersten Speichern</legend><label class="choice">Dein Name<input id="design-author" maxlength="100" autocomplete="name"></label><label class="choice">Speicher-PIN<input id="design-pin" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}"></label></fieldset><p id="preset-status" role="status"></p>
 </form>
 </details>
-<p class="preset-suggestion">Preis pro Auswahl im Vergleich · $ günstig · $$ mittel · $$$ höherpreisig</p>
-<div class="choices" id="choices"></div>
-<details><summary>Planungsangaben</summary>
+<section aria-labelledby="planning-title">
+<h2 id="planning-title">Planungsangaben</h2>
 <h2>Küche</h2>
 <p>Die Wandzeile enthält einen 60 cm breiten, hohen Kühl-Gefrierschrank, Arbeitsfläche sowie Ober- und Unterschränke. Zur Seitenwand sitzt eine 10 cm breite Passleiste, oben bündig mit dem Kühlschrank. Durchgehende Sockel schliessen die sichtbaren Bodenfugen. Die Kühlschranktür ist rechts angeschlagen und öffnet zum Arbeitsgang. In der Draufsicht sind die Öffnungsbereiche orange markiert.</p>
 <p>Die Halbinsel bündelt Spüle, Kochfeld und Backofen. Unter der Spüle sitzt auf der Bedienseite eine 55 cm breite Front für den Abfallschrank. Sie ist 2,00 × 0,65 m gross und endet bündig mit der geschlossenen Küchenwand. Die Wandzeile reicht bündig bis unter das Fenster. Die Arbeitsplatten sind 65 cm tief, die Oberschränke 35 cm. Der Arbeitsgang misst 116 cm.</p>
@@ -149,7 +151,7 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
 <p>Rahmenloses Duschglas bis zur Decke. Die Ablaufrinne ist bündig im Duschboden eingelassen, mit einem sichtbaren Abstand zur WC-Wand.</p>
 <h2>Planungsstand</h2>
 <p>Fensterpositionen und Abmessungen nach dem markierten Grundriss, teils abgelesen. Raumhöhe 2,39 m. Vor Ausführung Aufmass, Tragwerk und Leitungen prüfen lassen.</p>
-</details>
+</section>
 </aside>
 </main>
 <script src="Materialpreise.js?v=2"></script>
