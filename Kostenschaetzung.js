@@ -41,6 +41,8 @@ const surfaces = {
   square: product('Blau · quadratische Fliesen', 105, 195),
   beige: product('Beige · schmale Fliesen', 115, 205),
   ivory: product('Elfenbein · glasierte Fliesen 10 × 30 cm', 115, 205),
+  roseStack: product('Rosé · Hochformat', 115, 205),
+  iceCube: product('Eisblau · Rauten', 130, 240),
   limestone: product('Kalksteinoptik · Feinsteinzeug', 115, 220),
   mineral: product('Mineralputz · ausserhalb der direkten Nasszone', 75, 150),
   coated: product('Bestandsplättli übermalen', 60, 120),
@@ -54,7 +56,8 @@ const rows = [
     bespoke:product('Schreinerküche nach Mass',12500,23500)
   },'ikea','Budgetansatz für ca. 4,3 m Plattenlänge plus Hoch- und Oberschränke. Geräte, Abdeckung und Anschlüsse separat.'),
   rate('k-top','kitchen','Arbeitsplatte inkl. Kanten, üblichem Aufmass und Montage',4.29,'lfm',{
-    current:product('Bisherige Steinoptik · neuer Naturstein',700,1400),
+    current:product('Steinoptik · neuer Naturstein',700,1400),
+    stoneLaminate:product('Steinoptik · Laminat',150,300),
     retained:retain,
     terrazzo:product('Terrazzo · Kunststein',650,1300),
     black:product('Schwarzer Naturstein · Granit',700,1500),
@@ -83,7 +86,7 @@ const rows = [
   rate('k-sink','kitchen','Spüle und Küchenarmatur',1,'Set',{standard:product('Standard inkl. Lieferung',420,1050),premium:product('Gehobene Ausführung',900,1900)},'ikea'),
   rate('k-water','kitchen','Wasser- und Abwasseranschluss Küche',1,'Pausch.',{standard:product('Bestehende Anschlusspunkte nutzen',800,2400),move:product('Anschlüsse versetzen',2000,4600)},'labour'),
   rate('k-power','kitchen','Elektroanschlüsse für die Küche',1,'Pausch.',{standard:product('Geräteanschlüsse und Steckdosen',950,2600)},'labour','Deckenbeleuchtung separat.'),
-  rate('k-hob','kitchen','Induktionskochfeld',1,'Stk.',{standard:product('Standard',350,750),premium:product('Premium',1150,2550),retained:retain},'appliances'),
+  rate('k-hob','kitchen','Kochfeld',1,'Stk.',{standard:product('Standard',350,750),premium:product('Premium',1150,2550),retained:retain},'appliances'),
   rate('k-oven','kitchen','Backofen',1,'Stk.',{standard:product('Standard',450,900),premium:product('Premium',1800,3200),retained:retain},'premium'),
   rate('k-dishwasher','kitchen','Geschirrspüler, integriert',1,'Stk.',{standard:product('Standard',550,950),premium:product('Premium',1500,2900),retained:retain},'appliances'),
   rate('k-fridge','kitchen','Kühl-Gefrierkombination, integriert',1,'Stk.',{standard:product('Standard',650,1300),premium:product('Premium',1450,3000),retained:retain},'appliances'),
@@ -94,6 +97,8 @@ const rows = [
     neu:product('Neue Standardfliesen',120,225),bestand:retain,
     sand:product('Sandbeige · quadratisch',125,225),slate:product('Schiefergrau · quadratisch',130,240),
     terracotta:product('Terracotta · quadratisch',135,250),white:product('Kreideweiss · rechteckig',125,225),
+    sandHerringbone:product('Sand · Fischgrät',150,260),
+    charcoalCube:product('Anthrazit · Rauten',150,260),
     terrazzo:product('Heller Terrazzo · Platten',155,290),
     coated:product('Bestandsboden geeignetenfalls beschichten',85,165),
     microSand:product('Fugenlos · Sand',120,220),
@@ -129,9 +134,9 @@ const rows = [
   rate('i-builtins','interior','Zwei raumhohe Einbauschränke',2,'Stk.',{
     none:product('Grifflos',1500,3400),wood:product('Sperrholzgriffe',1550,3550),bore:product('Griffbohrungen',1550,3600)
   },'labour','Budgetansatz pro Einbau nach Mass, inkl. üblicher Montage. Lose Schränke separat.'),
-  rate('e-spots','electric','Neue LED-Spots in der Decke',8,'Stk.',{
+  rate('e-spots','electric','Neue LED-Spots in der Decke',6,'Stk.',{
     standard:product('Einbauspot mit Standardanschluss',130,250),premium:product('Dimmbar / höherwertig',200,370)
-  },'labour','8 Spots als editierbare Annahme. Leitungsführung, Brandschutz und geeignetes Deckensystem prüfen.'),
+  },'labour','Je drei Spots in Küche und Gang. Die Menge ist editierbar. Leitungsführung, Brandschutz und geeignetes Deckensystem prüfen.'),
   rate('e-controls','electric','Treiber, Schaltung und gemeinsame Zuleitung',1,'Pausch.',{standard:product('Dimmer / Schaltung und Grundanschluss',300,850)},'labour')
 ];
 
@@ -181,6 +186,17 @@ const state = read(localStorage,saveKey,initialState);
 state.rows ??= {};
 state.custom = Array.isArray(state.custom) ? state.custom : [];
 state.bundles = Array.isArray(state.bundles) ? state.bundles : [];
+const layoutDeviceLabels={
+  'k-hob':{ceramic:'Glaskeramik · 60 cm',bora:'BORA S Pure mit Abzug',vzug:'V-ZUG CombiCookTop I804 mit Abzug'},
+  'k-hood':{wall:'Umluft-Einbauhaube im Oberschrank',island:'Hängende Umluft-Inselhaube',integrated:'Im Kochfeld enthalten'}
+};
+for(const row of rows){
+  for(const [key,[,low,high]] of Object.entries(materialPriceGuide[row.id]??{})){
+    const label=row.variants[key]?.label??layoutDeviceLabels[row.id]?.[key];
+    if(label)row.variants[key]=product(label,low,high);
+  }
+}
+
 const currentRows = new Map();
 const sections = new Map();
 
@@ -222,7 +238,9 @@ let configuration=modelConfiguration();
 let furnitureQuantities=inventoryQuantities(configuration);
 function modelVariant(row){
   const s=configuration.selections;
+  const cooking=cookingPriceOptions[s.cookingSetup??'integrated'];
   return {
+    'k-hob':cooking?.hob,'k-hood':cooking?.hood,
     'k-top':s.worktop,'k-floor':s.floor,'b-floor':s['bath-tile'],
     'b-walls':s.sideWallFinish,'b-back':s.showerFinish,'b-glass':s.showerGlass,
     'b-shower':s['bath-tile']?.startsWith('micro')?'seamless':undefined,
@@ -279,8 +297,11 @@ function calculateQuestionnaire(){
   if(['system','bespoke'].includes(answers.cabinets))
     set('k-cabinets',{variant:answers.cabinets==='system'?'standard':'bespoke'});
   if(['retain','standard','premium'].includes(answers.appliances)){
-    for(const id of ['k-hob','k-oven','k-dishwasher','k-fridge','k-hood'])
-      set(id,answers.appliances==='retain'?{active:false}:{variant:answers.appliances});
+    for(const id of ['k-hob','k-oven','k-dishwasher','k-fridge','k-hood']){
+      const row=rows.find(item=>item.id===id);
+      if(answers.appliances==='retain')set(id,{active:false});
+      else if(!['k-hob','k-hood'].includes(id)||!modelVariant(row))set(id,{variant:answers.appliances});
+    }
   }
   if(answers.kitchenWater==='retain'||answers.kitchenWater==='move')
     set('k-water',{variant:answers.kitchenWater==='move'?'move':'standard'});
@@ -432,7 +453,10 @@ function makeRow(row){
   const option=element('select');
   if(row.variants){
     option.setAttribute('aria-label',row.name+' Ausführung');
-    for(const [id,item] of Object.entries(row.variants))option.add(new Option(item.label,id));
+    for(const [id,item] of Object.entries(row.variants)){
+      const tier=materialPriceGuide[row.id]?.[id]?.[0];
+      option.add(new Option(tier?item.label+'  '+'$'.repeat(tier):item.label,id));
+    }
     option.value=settings.variant;
     option.onchange=()=>{
       stored.variant=option.value;

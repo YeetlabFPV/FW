@@ -14,7 +14,8 @@
 #bundle-dialog{max-width:min(95vw,580px);width:100%;max-height:85dvh;overflow:auto;border:1px solid var(--line);border-radius:12px;color:inherit;padding:18px}#bundle-dialog::backdrop{background:#1d30275d}#bundle-form>label,#bundle-positions label{display:block;margin:.35rem 0}#bundle-form fieldset{border:1px solid var(--line);border-radius:7px;margin-top:12px}#bundle-positions{max-height:31dvh;overflow:auto}
 </style>
 <script type="application/json" id="estimate-defaults">{"wardrobeWidths":{"main":"100","second":"100","entry":"200"},"furniture":{"removed":["fold-entry","night-left"],"added":[["extra-96be8547-8041-4cfe-aef6-cf3bec682727","night-left"]]},"selections":{"floor":"slate","kitchen":"#b4c4d9","bath":"#a8bbc4","bathWalls":"#ffffff","bathWall":"#c0cfbb","sideboard":"#b7abc7","sofa":"#9baeba","builtins":"#939e95","linoleum":"#d6c9ae","worktop":"current","showerFinish":"blue","sideWallFinish":"paint","showerGlass":"clear","linoFinish":"fine","kitchenHandle":"#d8b58d","bathHandle":"#798589","builtinsHandle":"wood","chairStyle":"shell","coffeeStyle":"wood","foldBed":"closed","parquet":"laengs","bath-tile":"neu"}}</script>
-<script src="Kostenschaetzung.js?v=kostenfokus-1" defer></script>
+<script src="Materialpreise.js?v=2" defer></script>
+<script src="Kostenschaetzung.js?v=beleuchtung-1" defer></script>
 </head>
 <body>
 <nav class="project-nav" aria-label="Seitennavigation"><a href="index.html" data-project="start">Startseite</a> <a href="Wohnen-und-Bad-360.html" data-project="blender">Blender-Ansichten (360°)</a> <a href="Kueche-Wohnen-3D.html" data-project="model">3D-Konfigurator</a> <a href="Kueche-Wohnen-3D.html?modus=begehen" data-project="walk">Begehung</a> <a href="Kostenschaetzung.html" data-project="cost" aria-current="page">Kostenschätzung</a></nav>
@@ -29,6 +30,14 @@
 <div class="total"><small>Gesamtbudget in CHF</small><strong id="grand-total"></strong></div>
 </div>
 <p class="note">Grobe Bandbreite, Preisstand November 2026, inkl. MwSt. Richtwerte für die Schweiz und aus dem Modell abgeleitete Mengen. Die Mengen vor einer Offerte vor Ort prüfen.</p>
+<p class="note">Kochfeld und Abzug folgen der Auswahl im 3D-Konfigurator. Kombigeräte werden beim Kochfeld einmal berechnet. Geräteansätze enthalten vorgesehenes Filter- oder Kanalzubehör. Elektroanschlüsse laufen separat.</p>
+<details class="note"><summary>Preisbeispiele zur Material- und Geräteauswahl</summary>
+<ul>
+<li><a href="https://hma-interior.ch/ratgeber/kuechenarbeitsplatte-material-vergleich">HMA Interior · Arbeitsplatten nach Material</a> und <a href="https://www.ikea.com/ch/de/p/ekbacken-arbeitsplatte-graubeige-steinmuster-laminat-20604320/">IKEA · Laminat mit Steinmuster</a></li>
+<li><a href="https://ttbischoff.ch/fliesenarbeiten/">T&amp;T Bischoff · Verlegung und Untergrund</a> und <a href="https://www.hornbach.ch/de/c/bodenbelaege-fliesen/fliesen/bodenfliesen/fliesen-in-terrazzooptik/S30900/">Hornbach · Materialpreise als Vergleich für Terrazzooptik</a></li>
+<li><a href="https://www.vzug.com/ch/de/induction-cooktop-with-integrated-extractor/type/details">V-ZUG · CombiCookTop</a> und <a href="https://www.suter.ch/produkte/downloadPdf/bora-s-pure-pursa2-40-003-100-00/">Suter · BORA S Pure</a></li>
+<li><a href="https://sanigroup.ch/haushaltgeraete/backen-kochen-und-steamen/kochfeld/">Sanigroup · Glaskeramikkochfelder</a>, <a href="https://www.ikea.com/ch/de/p/utdrag-dunstabzug-zum-einbauen-edelstahl-60392298/">IKEA · Einbauhaube</a> und <a href="https://www.ikea.com/ch/de/cat/dunstabzugshauben-fuer-deckenmontage-33508/">IKEA · Inselhauben</a></li>
+</ul></details>
 <div class="actions">
 <label>Planung (%) <input type="number" id="planning" min="0" max="100" step="0.5" value="8"></label>
 <label>Reserve (%) <input type="number" id="reserve" min="0" max="100" step="0.5" value="12"></label>
@@ -63,7 +72,7 @@
 <label>Bezeichnung <input name="name" required maxlength="100"></label>
 <label>Offerte total inkl. MwSt. in CHF <input name="quote" type="number" min="0" step="0.01" required></label>
 <fieldset><legend>Enthaltene Positionen</legend><div id="bundle-positions"></div></fieldset>
-<p class="note">Die ausgewählten Positionen zählen über die Sammelofferte. Nach dem Entfernen gelten ihre bisherigen Einstellungen.</p>
+<p class="note">Die ausgewählten Positionen zählen über die Sammelofferte. Wenn du die Sammelofferte entfernst, gelten wieder die Einstellungen der einzelnen Positionen.</p>
 <p id="bundle-status" role="status"></p>
 <div class="actions"><button class="primary" type="submit">Übernehmen</button><button id="bundle-cancel" type="button">Abbrechen</button></div>
 </form>
