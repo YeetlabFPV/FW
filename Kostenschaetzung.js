@@ -40,6 +40,7 @@ const surfaces = {
   green: product('Waldgrün · versetzt', 130, 240),
   square: product('Blau · quadratische Fliesen', 105, 195),
   beige: product('Beige · schmale Fliesen', 115, 205),
+  ivory: product('Elfenbein · glasierte Fliesen 10 × 30 cm', 115, 205),
   limestone: product('Kalksteinoptik · Feinsteinzeug', 115, 220),
   mineral: product('Mineralputz · ausserhalb der direkten Nasszone', 75, 150),
   coated: product('Bestandsplättli übermalen', 60, 120),
@@ -94,14 +95,19 @@ const rows = [
     sand:product('Sandbeige · quadratisch',125,225),slate:product('Schiefergrau · quadratisch',130,240),
     terracotta:product('Terracotta · quadratisch',135,250),white:product('Kreideweiss · rechteckig',125,225),
     terrazzo:product('Heller Terrazzo · Platten',155,290),
-    coated:product('Bestandsboden geeignetenfalls beschichten',85,165)
-  },'trades','4,27 m² Bad minus rund 1,24 m² Dusche. Kleinflächenpauschalen und Untergrund prüfen.'),
+    coated:product('Bestandsboden geeignetenfalls beschichten',85,165),
+    microSand:product('Fugenlos · Sand',120,220),
+    microChalk:product('Fugenlos · Kreide',120,220),
+    microGreige:product('Fugenlos · Greige',120,220),
+    microWarmGrey:product('Fugenlos · Warmgrau',120,220)
+  },'trades','4,27 m² Bad minus rund 1,24 m² Dusche. Kleinflächenpauschalen und Untergrund prüfen. Fugenlos ist als Mikrozementoptik kalkuliert.'),
   rate('b-walls','bath','Badseitenwände',16.2,'m²',surfaces,'trades','Wandabwicklung aus dem Modell abzüglich Tür und Duschrückwand.'),
   rate('b-back','bath','Duschrückwand',3.39,'m²',{...surfaces,paint:product('Fugenlose Nassraumoberfläche',135,245)},'trades','1,42 × 2,39 m. Abdichtung separat. Plättlilack nur bei dafür freigegebenem System.'),
   rate('b-seal','bath','Verbundabdichtung direkt in der Nasszone',5,'m²',{standard:product('Mit Dichtbändern und Manschetten',65,110)},'labour'),
   rate('b-shower','bath','Bodengleiche Dusche mit Gefälle, Ablauf und Belag',1,'Pausch.',{
     standard:product('Gefälle und Standardbelag, inkl. Rinne',1750,3800),
-    tray:product('Flache Duschwanne und Ablauf',1250,3100)
+    tray:product('Flache Duschwanne und Ablauf',1250,3100),
+    seamless:product('Gefälle und fugenloser Belag, inkl. Rinne',1750,3800)
   },'labour','Zusätzlich zu Glas, Armatur und Verbundabdichtung.'),
   rate('b-glass','bath','Walk-in-Duschglas inkl. Montageteilen',1,'Stk.',{
     clear:product('Klarglas',650,1600),reeded:product('Riffelglas · ESG nach Mass',1100,2450)
@@ -112,10 +118,10 @@ const rows = [
   rate('b-cabinet','bath','Kleiner Waschtischunterschrank',1,'Stk.',{standard:product('Standard 60 cm',370,950),bespoke:product('Massanfertigung',950,2200)},'bath'),
   rate('b-mirror','bath','Spiegel und Badzubehör',1,'Set',{standard:product('Spiegel, Halter, Kleinmaterial',220,650),lit:product('LED-Spiegel und Zubehör',450,1250)},'bath'),
   rate('b-elec','bath','Elektro im Bad',1,'Pausch.',{standard:product('Anschlüsse, Schalter und Schutz',450,1200)},'labour','Deckenspots separat.'),
-  rate('i-parquet','interior','Parkett ausserhalb von Küche und Bad',58.5,'m²',{
+  rate('i-parquet','interior','Parkett ausserhalb von Küche und Bad',0,'m²',{
     cross:product('Eiche · quer verlegt',110,185),long:product('Eiche · längs verlegt',110,190),
     sand:product('Bestand schleifen und versiegeln',38,68),retained:retain
-  },'trades','Modellansatz aus Dielenfläche abzüglich Küchen- und Badfläche. Verlegeart und Zuschnitt können den Ansatz ändern.'),
+  },'trades','Nettofläche aus dem 3D-Grundriss, ohne Küche, Bad und Wandflächen. Verschnitt separat berücksichtigen.'),
   rate('i-paint','interior','Wohnung neu streichen',150,'m²',{
     standard:product('Innenwände und geeignete Decken, zwei Anstriche',14,27),
     repair:product('Mit zusätzlichem Spachtelaufwand',24,45)
@@ -218,6 +224,7 @@ function modelVariant(row){
   return {
     'k-top':s.worktop,'k-floor':s.floor,'b-floor':s['bath-tile'],
     'b-walls':s.sideWallFinish,'b-back':s.showerFinish,'b-glass':s.showerGlass,
+    'b-shower':s['bath-tile']?.startsWith('micro')?'seamless':undefined,
     'i-parquet':s.parquet==='laengs'?'long':'cross','i-builtins':s.builtinsHandle,
     chairs:s.chairStyle==='wood'?'wood':'standard',coffee:s.coffeeStyle==='skids'?'skids':'standard'
   }[row.id];
@@ -243,7 +250,6 @@ const questions=[
   ['bathShower','Duschplatz, Glas und Armatur',scopeOptions],
   ['looseFurniture','Lose Möbel',{unknown:'Einzeln in der Schätzung festlegen',retain:'Alle vorhandenen Möbel behalten',renew:'Möbel gemäss Modell neu anschaffen'}],
   ['parquet','Parkett',{...scopeOptions,sand:'Bestand schleifen und versiegeln'}],
-  ['parquetArea','Parkettfläche in m²'],
   ['paintArea','Zu streichende Fläche in m²'],
   ['spotCount','Anzahl neue Deckenspots']
 ];
@@ -271,7 +277,7 @@ function calculateQuestionnaire(){
     set('b-water',{variant:answers.bathWater==='retain'?'partial':'standard'});
   if(answers.fixtures==='retain')for(const id of ['b-wc','b-basin','b-cabinet'])set(id,{active:false});
   if(answers.bathShower==='retain')for(const id of ['b-shower','b-glass','b-tap'])set(id,{active:false});
-  for(const [name,id] of [['parquetArea','i-parquet'],['paintArea','i-paint'],['spotCount','e-spots']]){
+  for(const [name,id] of [['paintArea','i-paint'],['spotCount','e-spots']]){
     if(typeof answers[name]!=='number')continue;
     set(id,{quantity:answers[name]});
     if(name==='spotCount'&&answers[name]===0)set('e-controls',{active:false});
@@ -292,7 +298,7 @@ function rowSettings(row){
   const variant=[stored.variant,quotedVariant,answer?.variant,suggested].find(key=>Object.hasOwn(row.variants,key))??Object.keys(row.variants)[0];
   const reference=row.variants[variant], overrides=stored.prices?.[variant];
   const defaultQuantity=row.category==='furniture'?(furnitureQuantities[row.id]??0):row.quantity;
-  return {active:stored.active??(overrides?.quote!=null?true:answer?.active??!['heating','tv','laptop'].includes(row.id)),quantity:validNumber(stored.quantity??answer?.quantity??defaultQuantity),
+  return {active:stored.active??(overrides?.quote!=null?true:answer?.active??!['heating','tv','laptop'].includes(row.id)),quantity:validNumber(row.id==='i-parquet'?defaultQuantity:stored.quantity??answer?.quantity??defaultQuantity),
     unit:row.unit, variant, low:validNumber(overrides?.low??reference.low),high:validNumber(overrides?.high??reference.high),quote:overrides?.quote};
 }
 
@@ -389,7 +395,7 @@ function makeRow(row){
   currentRows.set(row.id,amount);
   const unit=row.variants?row.unit:input('text',row.unit,'Einheit der Zusatzposition',v=>row.unit=v);
   tr.append(heading,cell('Ausführung',row.variants?option:element('span','Eigene Position')),
-    cell('Menge',input('number',settings.quantity,row.name+' Menge',v=>stored.quantity=v)),
+    cell('Menge',row.id==='i-parquet'?element('span',parquetArea===null?'–':nf.format(settings.quantity)):input('number',settings.quantity,row.name+' Menge',v=>stored.quantity=v)),
     cell('Einheit',unit),
     cell('CHF niedrig',input('number',settings.low,row.name+' Richtpreis niedrig',v=>setPrice('low',v))),
     cell('CHF hoch',input('number',settings.high,row.name+' Richtpreis hoch',v=>setPrice('high',v))),
@@ -525,4 +531,48 @@ for(const [name,url] of Object.values(sources)){
   const li=element('li'),link=element('a',name);
   link.href=url;li.append(link);$('sources').append(li);
 }
+let parquetArea=null;
+function floorArea(model){
+  const boards=model.filter(piece=>piece.name==='Eichenparkett_Diele');
+  const kitchen=model.find(piece=>piece.name==='Linoleum_Kuechenboden');
+  const bath=model.find(piece=>piece.name==='Bad_Boden');
+  if(!boards.length||!kitchen||!bath)throw Error('Grundriss unvollständig');
+  const left=Math.min(...boards.map(p=>p.x));
+  const right=Math.max(...boards.map(p=>p.x+p.w));
+  const top=Math.min(...boards.map(p=>p.y));
+  const bottom=Math.max(...boards.map(p=>p.y+p.d));
+  const cutouts=[kitchen,bath,...model.filter(piece=>piece.wall&&piece.z<=.02)]
+    .map(p=>[Math.max(left,p.x),Math.min(right,p.x+p.w),Math.max(top,p.y),Math.min(bottom,p.y+p.d)])
+    .filter(([x1,x2,y1,y2])=>x2>x1&&y2>y1);
+  const edges=[...new Set([left,right,...cutouts.flatMap(c=>c.slice(0,2))])].sort((a,b)=>a-b);
+  let area=0;
+  for(let i=1;i<edges.length;i++){
+    const x=(edges[i-1]+edges[i])/2;
+    const blocked=cutouts.filter(([x1,x2])=>x>x1&&x<x2).map(c=>c.slice(2)).sort(([a],[b])=>a-b);
+    let length=0,covered=top;
+    for(const [start,end] of blocked){
+      length+=Math.max(0,end-Math.max(start,covered));
+      covered=Math.max(covered,end);
+    }
+    area+=(edges[i]-edges[i-1])*(bottom-top-length);
+  }
+  return Math.round(area*100)/100;
+}
+async function loadParquetArea(){
+  const field=$('parquet-area');
+  try{
+    const response=await fetch('Kueche-Wohnen-3D.html');
+    if(!response.ok)throw Error('Modell konnte nicht geladen werden');
+    const source=await response.text();
+    const modelLine=source.split('\n').find(line=>line.startsWith('const {model,materials}='));
+    const {model}=JSON.parse(modelLine.slice(modelLine.indexOf('=')+1,-1));
+    parquetArea=floorArea(model);
+    rows.find(row=>row.id==='i-parquet').quantity=parquetArea;
+    field.textContent=nf.format(parquetArea)+' m²';
+    render();
+  }catch{
+    field.textContent='Nicht verfügbar. Parkett fehlt im Total.';
+  }
+}
 render();
+loadParquetArea();

@@ -236,16 +236,20 @@ for(const [type,source] of [[gl.VERTEX_SHADER,`
    return mix(base*(1.+tint),vec3(.44,.40,.38),mortar);
  }
  vec3 tiledWall(vec2 p,float style){
-   vec2 size=style<24.5?vec2(.057,.18):style<25.5?vec2(.055,.22):style<26.5?vec2(.085,.235):vec2(.195);
+   vec2 size=style<24.5?vec2(.10,.18):style<25.5?vec2(.10,.22):style<26.5?vec2(.10,.235):style<27.5?vec2(.195):vec2(.10,style<50.?.205:.30);
    vec2 grid=p/size;
    if(style>25.5&&style<26.5)grid.y+=mod(floor(grid.x),2.)*.5;
    vec2 d=min(fract(grid),1.-fract(grid))*size;
    vec3 base=style<24.5?vec3(.46,.59,.63):style<25.5?vec3(.10,.37,.43):style<26.5?vec3(.17,.33,.28):vec3(.28,.43,.51);
    vec3 grout=style<24.5?vec3(.79,.62,.47):vec3(.71,.72,.69);
-   float variation=(hash(floor(grid))-.5)*(style<24.5?.09:style>26.5?.48:.23);
+   if(style>44.5){
+     base=style<50.?vec3(.76,.71,.65):vec3(.84,.81,.75);
+     grout=style<50.?vec3(.63,.58,.53):vec3(.78,.74,.69);
+   }
+   float variation=(hash(floor(grid))-.5)*(style<24.5?.09:style>44.5?.07:style>26.5?.48:.23);
    float glaze=(noise(p*28.)-.5)*.19+(noise(p*87.)-.5)*.11;
    float gloss=pow(max(0.,sin(p.x*14.+noise(p*41.)*.8)),9.)*.075;
-   return mix(base*(1.+variation+glaze)+vec3(gloss),grout,joint(min(d.x,d.y)));
+   return mix(base*(1.+variation+glaze*(style>44.5?.45:1.))+vec3(gloss),grout,joint(min(d.x,d.y)));
  }
  vec3 materialSurface(float style){
    vec2 p=world.xy;
@@ -267,15 +271,17 @@ for(const [type,source] of [[gl.VERTEX_SHADER,`
      vec3 stone=seed<.36?vec3(.53,.49,.41):seed<.65?vec3(.71,.65,.56):vec3(.96,.92,.84);
      return mix(matrix,stone,chip);
    }
-   if(abs(style-45.)<.5){
-     vec2 size=vec2(.043,.205);
-     vec2 grid=world.yz/size;
-     vec2 edge=min(fract(grid),1.-fract(grid))*size;
-     return mix(vec3(.76,.71,.65)*(.97+.09*hash(floor(grid))),vec3(.56,.51,.46),joint(min(edge.x,edge.y)));
+   if(abs(style-45.)<.5||abs(style-52.)<.5)return tiledWall(world.yz,style);
+   if(abs(style-58.)<.5||abs(style-65.)<.5)return tiledWall(world.xz,style-13.);
+   if(style>47.5&&style<51.5){
+     vec3 base=style<48.5?vec3(.76,.70,.62):style<49.5?vec3(.85,.83,.78):style<50.5?vec3(.67,.61,.56):vec3(.59,.58,.56);
+     float cloudy=(noise(p*3.8)-.5)*.057+(noise(p*19.)-.5)*.025;
+     float fine=(noise(p*145.)-.5)*.021;
+     return base*(1.+cloudy+fine);
    }
    if(style>36.5)return tiledWall(world.xz,style-13.);
    if(style>32.5){
-     vec2 size=style<34.5?vec2(.30):style<35.5?vec2(.22):vec2(.30,.60);
+     vec2 size=style<34.5?vec2(.30):style<35.5?vec2(.22):vec2(.10,.30);
      vec2 grid=p/size;
      if(style>35.5)grid.y+=mod(floor(grid.x),2.)*.5;
      vec2 edge=min(fract(grid),1.-fract(grid))*size;
@@ -526,9 +532,10 @@ let glassCount=0,fieldOfView=1.15;
 let ceiling='holz';
 const tops={current:[null,10],terrazzo:['#d7cbbd',12],black:['#353539',13],white:['#eae8e3',14],oak:['#c5a17a',15],concrete:['#a8a5a0',16],travertine:['#ccb79a',17],marble:['#e5e1d9',18]};
 const floorTiles={rhomboid:20,cubes:21,terracotta:22};
-const showerTiles={blue:24,petrol:25,green:26,square:27};
-const bathFloorTiles={sand:33,slate:34,terracotta:35,white:36,terrazzo:44};
-const wallFinishOptions={'Einfarbig':'paint','Nebelblau · schmale Fliesen':'blue','Petrol · glasierte Stäbchen':'petrol','Waldgrün · versetzte Fliesen':'green','Blau · quadratische Fliesen':'square'};
+const showerTiles={blue:24,petrol:25,green:26,square:27,beige:45,ivory:52};
+const seamlessBathFloor={microSand:48,microChalk:49,microGreige:50,microWarmGrey:51};
+const bathFloorTiles={sand:33,slate:34,terracotta:35,white:36,terrazzo:44,...seamlessBathFloor};
+const wallFinishOptions={'Einfarbig':'paint','Nebelblau · schmale Fliesen':'blue','Petrol · glasierte Stäbchen':'petrol','Waldgrün · versetzte Fliesen':'green','Blau · quadratische Fliesen':'square','Beige · schmale Fliesen':'beige','Elfenbein · glasierte Fliesen 10 × 30 cm':'ivory'};
 const linoPatterns={smooth:28,clouded:29,hex:30,speckled:31};
 let builtinsHandle='none',chairStyle='shell',coffeeStyle='wood';
 const defaultConfiguration={
@@ -1514,9 +1521,9 @@ function build(){
    }
    const stone=b.material==='Badboden'||b.material.startsWith('Schiefer');
    const floorPattern=b.name==='Linoleum_Kuechenboden'?(floorTiles[floor]??linoPatterns[linoFinish]??4):0;
-   const showerPattern=b.material==='Duschrueckwand'?({limestone:43,beige:45}[showerFinish]??showerTiles[showerFinish]??0):0;
+   const showerPattern=b.material==='Duschrueckwand'?(showerFinish==='limestone'?43:showerTiles[showerFinish]??0):0;
    const sideWallPattern=(b.name.startsWith('Bad_Wandbelag_')||b.name==='Bad_geflieste_Vorwand')&&b.material==='Badwand'?(showerTiles[sideWallFinish]??0):0;
-   const bathFloorPattern=b.name==='Bad_Boden'?(bathFloorTiles[bathFloor]??0):0;
+   const bathFloorPattern=b.name==='Bad_Boden'?(bathFloorTiles[bathFloor]??0):b.name==='Dusche'?(seamlessBathFloor[bathFloor]??0):0;
    const woodFurniture=['Holz','Zarge','Eiche','EicheHell','EicheMittel','EicheDunkel'].includes(b.material)&&b!==ceilingBox;
    const inside=b.material==='Aussenwand'?innerWallFaces[b.name.split('_')[0]]:undefined;
    const plaster=inside===undefined?null:rgb(materials.Putz);
@@ -1927,7 +1934,7 @@ chooser('worktop','Arbeitsplatte',{'Bisheriger Stein':'current','Terrazzo':'terr
  worktop=value;
  if(redraw){build();draw();}
 });
-chooser('showerFinish','Belag der Duschrückwand',{...wallFinishOptions,'Kalksteinoptik':'limestone','Beige · schmale Fliesen':'beige'},showerFinish,(value,redraw)=>{
+chooser('showerFinish','Belag der Duschrückwand',{...wallFinishOptions,'Kalksteinoptik':'limestone'},showerFinish,(value,redraw)=>{
  showerFinish=value;
  if(redraw){build();draw();}
 },'Die Wandfarbe ist beim Belag «Einfarbig» sichtbar.');
@@ -1969,7 +1976,7 @@ chooser('foldBed','Klappbett · Zimmer Eingang',{'Eingeklappt':'closed','Ausgekl
 });
 chooser('parquet','Parkettrichtung',{'Quer':'quer','Längs':'laengs'},'quer',(value,redraw)=>{longParquet=value==='laengs';if(redraw){build();draw();}});
 chooser('ceiling','Decke',{'Holz':'holz','Warmweiss':'weiss'},ceiling,(value,redraw)=>{ceiling=value;if(redraw){build();draw();}});
-chooser('bath-tile','Badboden',{'Neue Fliesen':'neu','Bestandsfliesen':'bestand','Sandbeige · Quadratisch':'sand','Schiefergrau · Quadratisch':'slate','Terracotta · Quadratisch':'terracotta','Kreideweiss · Rechteckig':'white','Terrazzo · Hell':'terrazzo'},bathFloor,(value,redraw)=>{
+chooser('bath-tile','Badboden',{'Neue Fliesen':'neu','Bestandsfliesen':'bestand','Sandbeige · Quadratisch':'sand','Schiefergrau · Quadratisch':'slate','Terracotta · Quadratisch':'terracotta','Kreideweiss · Rechteckig':'white','Terrazzo · Hell':'terrazzo', 'Fugenlos · Sand':'microSand','Fugenlos · Kreide':'microChalk','Fugenlos · Greige':'microGreige','Fugenlos · Warmgrau':'microWarmGrey'},bathFloor,(value,redraw)=>{
  bathFloor=value;
  if(redraw){build();draw();}
 });

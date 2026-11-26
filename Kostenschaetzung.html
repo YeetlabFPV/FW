@@ -11,7 +11,7 @@
 .question-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(245px,100%),1fr));gap:.85rem;margin-top:12px}.question-grid label{display:grid;gap:4px}.question-grid select{width:100%}
 </style>
 <script type="application/json" id="estimate-defaults">{"wardrobeWidths":{"main":"100","second":"100","entry":"200"},"furniture":{"removed":["fold-entry","night-left"],"added":[["extra-96be8547-8041-4cfe-aef6-cf3bec682727","night-left"]]},"selections":{"floor":"slate","kitchen":"#b4c4d9","bath":"#a8bbc4","bathWalls":"#ffffff","bathWall":"#c0cfbb","sideboard":"#b7abc7","sofa":"#9baeba","builtins":"#939e95","linoleum":"#d6c9ae","worktop":"current","showerFinish":"blue","sideWallFinish":"paint","showerGlass":"clear","linoFinish":"fine","kitchenHandle":"#d8b58d","bathHandle":"#798589","builtinsHandle":"wood","chairStyle":"shell","coffeeStyle":"wood","foldBed":"closed","parquet":"laengs","bath-tile":"neu"}}</script>
-<script src="Kostenschaetzung.js?v=fragebogen-1" defer></script>
+<script src="Kostenschaetzung.js?v=modellflaeche-1" defer></script>
 </head>
 <body>
 <header><h1>Kostenschätzung</h1><nav aria-label="Projekt"><a href="Kueche-Wohnen-3D.html">3D-Konfigurator</a><a href="index.html">Startseite</a></nav></header>
@@ -38,6 +38,7 @@
 <summary><strong>Schätzung verfeinern · optionaler Fragebogen</strong></summary>
 <p>Beantworte, was du schon weisst. Die Antworten passen den Umfang und die Mengen an. Manuell gesetzte Mengen, Ausführungen und Offerten haben Vorrang. Eigene Einheitspreise bleiben je Ausführung gespeichert.</p>
 <form id="questionnaire-form">
+<p class="note">Parkettfläche aus dem Modell <output id="parquet-area">wird berechnet …</output></p>
 <div class="question-grid" id="questionnaire-fields"></div>
 <div class="actions"><button class="primary" type="submit">Antworten übernehmen</button><button type="button" id="questionnaire-reset">Antworten zurücksetzen</button></div>
 <p id="questionnaire-status" class="note" role="status"></p>
