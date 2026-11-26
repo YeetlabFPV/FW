@@ -461,9 +461,9 @@ const bathFloorTiles={sand:33,slate:34,terracotta:35,white:36,terrazzo:44};
 const wallFinishOptions={'Einfarbig':'paint','Nebelblau · schmale Fliesen':'blue','Petrol · glasierte Stäbchen':'petrol','Waldgrün · versetzte Fliesen':'green','Blau · quadratische Fliesen':'square'};
 const linoPatterns={smooth:28,clouded:29,hex:30,speckled:31};
 let builtinsHandle='none',chairStyle='shell',coffeeStyle='wood';
-const wardrobeWidths={main:'100',second:'100',entry:'200'};
+const defaultWardrobeWidths={main:'100',second:'100',entry:'200'};
+const wardrobeWidths={...defaultWardrobeWidths};
 let foldState='closed';
-const wardrobeSizes={'100 × 60 × 201 cm':'100','200 × 60 × 201 cm':'200'};
 let showDoorFrames=true,showWindows=true;
 const builtinMiddles=new Map();
 for(const b of model){
@@ -594,9 +594,15 @@ try{furniturePositions=JSON.parse(localStorage.getItem(furnitureKey))??{};}catch
 const defaultPosition={dx:0,dy:0,angle:0};
 const furnitureInventoryKey='fw-moebelliste-v1';
 const furnitureCatalog=new Map(furnitureGroups);
+for(const [id,label,wardrobeWidth] of [
+ ['wardrobe-small','Schrank klein · 100 × 60 × 201 cm','100'],
+ ['wardrobe-large','Schrank gross · 200 × 60 × 201 cm','200']
+]){
+ furnitureCatalog.set(id,{label,wardrobeWidth,pieces:furnitureGroups.get('wardrobe-main').pieces});
+}
 const furnitureTypes=new Map([
  ['bed-main',{label:'Bett',sources:['bed-main','bed-second']}],
- ['wardrobe-main',{label:'Kleiderschrank',sources:['wardrobe-main','wardrobe-second','wardrobe-entry']}],
+ ...['wardrobe-small','wardrobe-large'].map(id=>[id,{label:furnitureCatalog.get(id).label,sources:[id]}]),
  ['fold-entry',{label:'Klappbett',sources:['fold-entry']}],
  ['night-left',{label:'Beistelltisch',sources:['night-left','night-right']}],
  ...['desk','coffee','sofa','dining','tv'].map(id=>[id,{label:furnitureCatalog.get(id).label,sources:[id]}])
@@ -620,9 +626,9 @@ function furnitureInventory(){
  return {removed:[...removedFurniture],added:[...addedFurniture]};
 }
 try{loadFurnitureInventory(JSON.parse(localStorage.getItem(furnitureInventoryKey)??'null'));}catch{}
-const activeFurniture=b=>(!b.wardrobe||b.width===wardrobeWidths[b.wardrobe])&&(!b.fold||b.fold===foldState);
+const activeFurniture=(b,id)=>(!b.wardrobe||b.width===(furnitureGroups.get(id)?.wardrobeWidth??wardrobeWidths[b.wardrobe]))&&(!b.fold||b.fold===foldState);
 function furnitureBounds(id){
- const pieces=furnitureGroups.get(id).pieces.filter(activeFurniture);
+ const pieces=furnitureGroups.get(id).pieces.filter(b=>activeFurniture(b,id));
  const x1=Math.min(...pieces.map(b=>b.x)),x2=Math.max(...pieces.map(b=>b.x+b.w));
  const y1=Math.min(...pieces.map(b=>b.y)),y2=Math.max(...pieces.map(b=>b.y+b.d));
  return {x:(x1+x2)/2,y:(y1+y2)/2,w:(x2-x1)/2,d:(y2-y1)/2};
@@ -1114,7 +1120,7 @@ function build(){
    });
  }
  function drawPiece(b,id){
-   if(!activeFurniture(b)||removedFurniture.has(id))return;
+   if(!activeFurniture(b,id)||removedFurniture.has(id))return;
    const placement=activePlacements.get(id);
    if(placement&&(placement.maxY<near||placement.minY>far))return;
    const first=data.length;
@@ -1287,7 +1293,7 @@ for(const [title,ids] of [
  ['Küche',['floor','kitchen','kitchenHandle','linoleum','worktop','linoFinish']],
  ['Bad',['bath','bathHandle','bathWalls','bathWall','showerFinish','sideWallFinish','showerGlass','bath-tile']],
  ['Wohnen',['sideboard','sofa','chairStyle','coffeeStyle']],
- ['Ganze Wohnung',['builtins','builtinsHandle','wardrobe-entry','wardrobe-main','wardrobe-second','foldBed','parquet','ceiling']]
+ ['Ganze Wohnung',['builtins','builtinsHandle','foldBed','parquet','ceiling']]
 ]){
  const group=document.createElement('fieldset');
  group.className='choice-group';
@@ -1302,6 +1308,14 @@ const configKey='fw-raum-materialien';
 let preferences={};
 try{preferences=JSON.parse(window.localStorage.getItem(configKey))??{};}catch{}
 
+function restoreWardrobeWidths(values){
+ for(const id of Object.keys(defaultWardrobeWidths)){
+   const key='wardrobe-'+id,value=values[id];
+   wardrobeWidths[id]=value==='100'||value==='200'?value:defaultWardrobeWidths[id];
+   preferences[key]=wardrobeWidths[id];
+ }
+}
+restoreWardrobeWidths(Object.fromEntries(Object.keys(defaultWardrobeWidths).map(id=>[id,preferences['wardrobe-'+id]])));
 function persistMaterials(){
  try{localStorage.setItem(configKey,JSON.stringify(preferences));}catch{}
 }
@@ -1388,12 +1402,6 @@ chooser('coffeeStyle','Couchtisch',{'Holzplatte · schräge Beine':'wood','Schwa
  coffeeStyle=value;
  if(redraw){build();draw();}
 });
-for(const [id,label] of [['entry','Schrank · Zimmer Eingang'],['second','Schrank · Schlafzimmer 1'],['main','Schrank · Schlafzimmer 2']]){
- chooser('wardrobe-'+id,label,wardrobeSizes,wardrobeWidths[id],(value,redraw)=>{
-   wardrobeWidths[id]=value;
-   if(redraw){validateFurniturePositions();build();draw();}
- });
-}
 chooser('foldBed','Klappbett · Zimmer Eingang',{'Eingeklappt':'closed','Ausgeklappt':'open'},foldState,(value,redraw)=>{
  foldState=value;
  if(redraw){validateFurniturePositions();build();draw();}
@@ -1432,6 +1440,7 @@ function configuration(name){
    version:1,
    name,
    layout:{...furniturePositions},
+   wardrobeWidths:{...wardrobeWidths},
    furniture:furnitureInventory(),
    selections:Object.fromEntries([...materialControls].map(([id,{select,label}])=>[
      id,{value:select.value,option:select.selectedOptions[0].textContent,label}
@@ -1472,6 +1481,7 @@ presetLoad.addEventListener('click',()=>{
    const value=preset.selections[id]?.value;
    if(value!==undefined)control.apply(value,false);
  }
+ restoreWardrobeWidths(preset.wardrobeWidths??Object.fromEntries(Object.keys(defaultWardrobeWidths).map(id=>[id,preset.selections['wardrobe-'+id]?.value])));
  loadFurnitureInventory(preset.furniture);
  furniturePositions=preset.layout?{...preset.layout}:{};
  updateFurnitureMenus();
@@ -1620,7 +1630,10 @@ addFurnitureButton.onclick=()=>{
 };
 document.querySelector('#placement-add-go').onclick=()=>{
  const type=furnitureTypes.get(placementCatalog.value),room=placementRoom.value;
- const source=type.sources.find(id=>removedFurniture.has(id))??type.sources[0];
+ const template=type.sources[0];
+ const width=furnitureCatalog.get(template).wardrobeWidth;
+ const candidates=width?['wardrobe-main','wardrobe-second','wardrobe-entry'].filter(id=>wardrobeWidths[id.slice('wardrobe-'.length)]===width):type.sources;
+ const source=candidates.find(id=>removedFurniture.has(id))??template;
  const restore=removedFurniture.has(source);
  const id=restore?source:'extra-'+crypto.randomUUID();
  if(!restore){
