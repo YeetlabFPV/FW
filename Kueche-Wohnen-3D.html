@@ -186,7 +186,7 @@ for(const [type,source] of [[gl.VERTEX_SHADER,`
  varying vec2 floorPosition;
  varying vec3 world;
  varying float isOak;
- uniform vec3 center;
+ uniform vec3 center,orthoEye;
  uniform bool perspective,hasLandscape,hasWood;
  uniform sampler2D landscape,woodAtlas;
  uniform bool detailedLight;
@@ -318,12 +318,22 @@ for(const [type,source] of [[gl.VERTEX_SHADER,`
    float facing=max(0.,dot(normal,normalize(ray+vec3(.0001))));
    float bottom=1.-smoothstep(.03,.38,world.z);
    float upper=smoothstep(2.00,2.43,world.z);
-   vec3 lit=color*(.89-.10*bottom-.075*upper+roomLight*.30+facing*.23);
+   vec3 lit=color*(.91-.065*bottom-.05*upper+roomLight*.30+facing*.23);
    return clamp(lit+color*vec3(.046,.034,.017)*roomLight,0.,1.);
  }
  void main(){
    float grain=1.;
    vec3 detail=vec3(0.);
+   if(abs(isOak-46.)<.5){
+     vec3 eye=perspective?normalize(center-world):orthoEye;
+     vec3 normal=${derivatives?'normalize(cross(dFdx(world),dFdy(world)))':'vec3(1.,0.,0.)'};
+     vec3 reflected=reflect(-eye,normal);
+     float sheen=pow(1.-abs(dot(eye,normal)),3.);
+     float window=exp(-pow((reflected.y-.25)*2.7,2.)-pow((reflected.z-.15)*3.1,2.));
+     vec3 glass=vec3(.019,.022,.026)+vec3(.12,.135,.147)*(window*.63+sheen*.26);
+     gl_FragColor=vec4(glass,1.);
+     return;
+   }
    if(abs(isOak-41.)<.5){
      float ridge=.5+.5*cos(world.y*628.31853);
      float highlight=pow(ridge,6.);
@@ -414,9 +424,9 @@ for(const [type,source] of [[gl.VERTEX_SHADER,`
        vec2 p=world.xy-b.xy;
        vec2 delta=max(abs(vec2(c*p.x+s*p.y,c*p.y-s*p.x))-b.zw,0.);
        float distance=length(delta);
-       float soft=1.-smoothstep(.012,detailedLight?.55:.22,distance);
-       float tight=detailedLight?.13*(1.-smoothstep(.009,.13,distance)):0.;
-       contact=max(contact,(detailedLight?.38:.24)*soft+tight);
+       float soft=1.-smoothstep(.012,detailedLight?.42:.18,distance);
+       float tight=detailedLight?.055*(1.-smoothstep(.009,.13,distance)):0.;
+       contact=max(contact,(detailedLight?.18:.15)*soft+tight);
      }
      grain*=1.-contact*(1.-smoothstep(.025,.20,world.z));
    }
@@ -442,7 +452,7 @@ for(const [i,name] of ['point','material'].entries()){
  gl.enableVertexAttribArray(slot);
  gl.vertexAttribPointer(slot,i===0?3:4,gl.FLOAT,false,28,12*i);
 }
-const uniforms=Object.fromEntries(['center','right','up','front','scale','viewOffset', 'perspective','landscape','hasLandscape','woodAtlas','hasWood'].map(name=>[name,gl.getUniformLocation(program,name)]));
+const uniforms=Object.fromEntries(['center','right','up','front','scale','viewOffset', 'perspective','orthoEye','landscape','hasLandscape','woodAtlas','hasWood'].map(name=>[name,gl.getUniformLocation(program,name)]));
 let landscapeRequested=false;
 function loadWalkLandscape(){
  if(landscapeRequested)return;
@@ -1117,6 +1127,36 @@ function build(){
      for(const point of [drain,rim(i),rim(i+1)])data.push(...point,.32,.36,.37,0);
    }
  }
+ function tvFurniture(box,color){
+   const {x,y,z,w,d,h}=box;
+   const bezel=rgb('#222426'),metal=rgb('#303437');
+   if(box.name==='TV_Bildschirm'){
+     roundedBox({x:x+w-.019,y,z,w:.0188,d,h},[.003,.006,.006],bezel,0);
+     roundedBox({x,y:y+d*.14,z:z+.035,w:w-.016,d:d*.72,h:h*.52},[.010,.016,.016],rgb('#393b3c'),0);
+     const screenX=x+w,edge=.007,bottom=.013;
+     emitSurface([
+       [screenX,y+edge,z+bottom],[screenX,y+d-edge,z+bottom],
+       [screenX,y+d-edge,z+h-edge],[screenX,y+edge,z+h-edge]
+     ].map(point=>({point,normal:[1,0,0]})),bezel,46);
+     roundedBox({x:screenX-.004,y:y+d/2-.014,z:z+.003,w:.0042,d:.028,h:.003},
+       [.0012,.0015,.001],rgb('#55595d'),0);
+   }else if(box.name==='TV_Fuss'){
+     roundedBox({x,y,z,w,d,h:.012},[.012,.018,.004],metal,0);
+     roundedBox({x:x+w*.43,y:y+d*.37,z:z+.010,w:w*.24,d:d*.26,h:h-.008},
+       [.004,.007,.006],metal,0);
+   }else{
+     const front=.019,inset=.003,gap=.003,doorWidth=(d-2*inset-2*gap)/3;
+     const frame=color.map(value=>value*.88);
+     roundedBox({...box,w:w-front,h:h-.017},[.008,.008,.007],frame,0);
+     roundedBox({x:x+w-front-.002,y:y+inset,z:z+inset,w:.003,d:d-2*inset,h:h-.017-2*inset},
+       [.001,.001,.001],color.map(value=>value*.46),0);
+     for(let index=0;index<3;index++){
+       roundedBox({x:x+w-front,y:y+inset+index*(doorWidth+gap),z:z+inset,w:front,d:doorWidth,h:h-.017-2*inset},
+         [.0035,.004,.004],color,0);
+     }
+     roundedBox({x,y,z:z+h-.017,w,d,h:.017},[.006,.006,.004],color,0);
+   }
+ }
  function trimLoop(box,inset,corner,z,thickness,color){
    const {x,y,w,d}=box;
    const centers=[[x+w-inset-corner,y+d-inset-corner],[x+inset+corner,y+d-inset-corner],
@@ -1321,6 +1361,7 @@ function build(){
        return;
      }
      if(b.name==='Spuelbecken')return;
+     if(b.name.startsWith('TV_')){tvFurniture(b,color);return;}
      if(b.name==='Wohnteppich'){
        roundedBox(b,[.034,.034,.003],color,11);
        trimLoop(b,.019,.026,b.z+b.h-.001,.0021,color.map(v=>v*.75));
@@ -1570,6 +1611,7 @@ function draw(){
  gl.uniform3fv(uniforms.right,[c,-s,0]);
  gl.uniform3fv(uniforms.up,[-s*v,-c*v,e]);
  gl.uniform3fv(uniforms.front,[s*e,c*e,v]);
+ gl.uniform3fv(uniforms.orthoEye,[s*e,c*e,v]);
  const factor=2/span;
  gl.uniform2f(uniforms.scale,factor*Math.min(1,height/width),factor*Math.min(1,width/height));
  gl.drawArrays(gl.TRIANGLES,0,count);
