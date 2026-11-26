@@ -250,11 +250,13 @@ const questions=[
   ['bathShower','Duschplatz, Glas und Armatur',scopeOptions],
   ['looseFurniture','Lose Möbel',{unknown:'Einzeln in der Schätzung festlegen',retain:'Alle vorhandenen Möbel behalten',renew:'Möbel gemäss Modell neu anschaffen'}],
   ['parquet','Parkett',{...scopeOptions,sand:'Bestand schleifen und versiegeln'}],
-  ['paintArea','Zu streichende Fläche in m²'],
+  ['paintScope','Zu streichende Fläche',{unknown:'Fläche manuell eingeben (optional)',all:'Alles · freie, nicht geplättelte Flächen'}],
+  ['paintArea','Manuelle Malerfläche in m²'],
   ['spotCount','Anzahl neue Deckenspots']
 ];
 const queryAnswers=()=>state.questionnaire??{};
 let questionnaireEffects=new Map();
+let estimateModel=null;
 function calculateQuestionnaire(){
   const answers=queryAnswers();
   const effects=new Map();
@@ -286,6 +288,14 @@ function calculateQuestionnaire(){
     if(['kitchen','bath'].includes(row.category)&&answers[row.category]==='retain')set(row.id,{active:false});
     if(row.category==='furniture'&&answers.looseFurniture==='retain')set(row.id,{active:false});
   }
+  if(answers.paintScope==='all'&&estimateModel){
+    const bathRow=state.rows['b-walls'];
+    const manualBath=Boolean(bathRow&&Object.keys(bathRow).length);
+    const includeBath=!manualBath&&answers.bath!=='retain'&&
+      !['coat','retain'].includes(answers.bathWalls)&&modelVariant(rows.find(row=>row.id==='b-walls'))==='paint';
+    set('i-paint',{quantity:paintableArea(estimateModel,includeBath),fromModel:true});
+    if(includeBath)set('b-walls',{active:false});
+  }
   return effects;
 }
 questionnaireEffects=calculateQuestionnaire();
@@ -298,7 +308,7 @@ function rowSettings(row){
   const variant=[stored.variant,quotedVariant,answer?.variant,suggested].find(key=>Object.hasOwn(row.variants,key))??Object.keys(row.variants)[0];
   const reference=row.variants[variant], overrides=stored.prices?.[variant];
   const defaultQuantity=row.category==='furniture'?(furnitureQuantities[row.id]??0):row.quantity;
-  return {active:stored.active??(overrides?.quote!=null?true:answer?.active??!['heating','tv','laptop'].includes(row.id)),quantity:validNumber(row.id==='i-parquet'?defaultQuantity:stored.quantity??answer?.quantity??defaultQuantity),
+  return {active:stored.active??(overrides?.quote!=null?true:answer?.active??!['heating','tv','laptop'].includes(row.id)),quantity:validNumber(row.id==='i-parquet'?defaultQuantity:answer?.fromModel?answer.quantity:stored.quantity??answer?.quantity??defaultQuantity),
     unit:row.unit, variant, low:validNumber(overrides?.low??reference.low),high:validNumber(overrides?.high??reference.high),quote:overrides?.quote};
 }
 
@@ -395,7 +405,7 @@ function makeRow(row){
   currentRows.set(row.id,amount);
   const unit=row.variants?row.unit:input('text',row.unit,'Einheit der Zusatzposition',v=>row.unit=v);
   tr.append(heading,cell('Ausführung',row.variants?option:element('span','Eigene Position')),
-    cell('Menge',row.id==='i-parquet'?element('span',parquetArea===null?'–':nf.format(settings.quantity)):input('number',settings.quantity,row.name+' Menge',v=>stored.quantity=v)),
+    cell('Menge',row.id==='i-parquet'||questionnaireEffects.get(row.id)?.fromModel?element('span',row.id==='i-parquet'&&parquetArea===null?'–':nf.format(settings.quantity)):input('number',settings.quantity,row.name+' Menge',v=>stored.quantity=v)),
     cell('Einheit',unit),
     cell('CHF niedrig',input('number',settings.low,row.name+' Richtpreis niedrig',v=>setPrice('low',v))),
     cell('CHF hoch',input('number',settings.high,row.name+' Richtpreis hoch',v=>setPrice('high',v))),
@@ -465,8 +475,21 @@ for(const [key,label,options] of questions){
   wrapper.append(field);
   questionFields.append(wrapper);
 }
+const paintScope=questionFields.querySelector('[name="paintScope"]');
+const manualPaint=questionFields.querySelector('[name="paintArea"]');
+function updatePaintQuestion(){
+  manualPaint.disabled=paintScope.value==='all';
+  manualPaint.closest('label').hidden=manualPaint.disabled;
+  const area=questionnaireEffects.get('i-paint');
+  $('paint-model-area').hidden=paintScope.value!=='all';
+  $('paint-model-area').textContent=area?.fromModel
+    ?'Malerfläche aus dem Modell: '+nf.format(area.quantity)+' m²'
+    :estimateModel?'Die Fläche wird mit «Antworten übernehmen» berechnet.':'Modellfläche noch nicht verfügbar.';
+}
+paintScope.addEventListener('change',updatePaintQuestion);
 function applyQuestionnaire(message){
   questionnaireEffects=calculateQuestionnaire();
+  updatePaintQuestion();
   render();
   save();
   $('questionnaire-status').textContent=message;
@@ -477,7 +500,7 @@ $('questionnaire-form').onsubmit=event=>{
   state.questionnaire={};
   for(const [key,,options] of questions){
     const value=fields.get(key);
-    if(value!==''&&value!=='unknown')state.questionnaire[key]=options?value:validNumber(value);
+    if(value!==null&&value!==''&&value!=='unknown')state.questionnaire[key]=options?value:validNumber(value);
   }
   applyQuestionnaire('Antworten gespeichert und in der Schätzung berücksichtigt.');
 };
@@ -494,12 +517,13 @@ for(const key of ['planning','reserve']){
 $('save').onclick=()=>save('Kostenschätzung gespeichert.');
 $('sync').onclick=()=>{
   configuration=modelConfiguration();
-  questionnaireEffects=calculateQuestionnaire();
   furnitureQuantities=inventoryQuantities(configuration);
   for(const row of rows){
     if(modelVariant(row))delete record(row).variant;
     if(row.category==='furniture')delete record(row).quantity;
   }
+  questionnaireEffects=calculateQuestionnaire();
+  updatePaintQuestion();
   render();
   save('Auswahl und Möbelmengen übernommen. Eigene Einheitspreise bleiben gespeichert.');
 };
@@ -532,17 +556,17 @@ for(const [name,url] of Object.values(sources)){
   link.href=url;li.append(link);$('sources').append(li);
 }
 let parquetArea=null;
-function floorArea(model){
+function planBounds(model){
   const boards=model.filter(piece=>piece.name==='Eichenparkett_Diele');
-  const kitchen=model.find(piece=>piece.name==='Linoleum_Kuechenboden');
-  const bath=model.find(piece=>piece.name==='Bad_Boden');
-  if(!boards.length||!kitchen||!bath)throw Error('Grundriss unvollständig');
-  const left=Math.min(...boards.map(p=>p.x));
-  const right=Math.max(...boards.map(p=>p.x+p.w));
-  const top=Math.min(...boards.map(p=>p.y));
-  const bottom=Math.max(...boards.map(p=>p.y+p.d));
-  const cutouts=[kitchen,bath,...model.filter(piece=>piece.wall&&piece.z<=.02)]
-    .map(p=>[Math.max(left,p.x),Math.min(right,p.x+p.w),Math.max(top,p.y),Math.min(bottom,p.y+p.d)])
+  if(!boards.length)throw Error('Grundriss unvollständig');
+  return [
+    Math.min(...boards.map(p=>p.x)),Math.max(...boards.map(p=>p.x+p.w)),
+    Math.min(...boards.map(p=>p.y)),Math.max(...boards.map(p=>p.y+p.d))
+  ];
+}
+function uncoveredArea([left,right,top,bottom],rectangles){
+  const cutouts=rectangles
+    .map(([x1,x2,y1,y2])=>[Math.max(left,x1),Math.min(right,x2),Math.max(top,y1),Math.min(bottom,y2)])
     .filter(([x1,x2,y1,y2])=>x2>x1&&y2>y1);
   const edges=[...new Set([left,right,...cutouts.flatMap(c=>c.slice(0,2))])].sort((a,b)=>a-b);
   let area=0;
@@ -556,7 +580,56 @@ function floorArea(model){
     }
     area+=(edges[i]-edges[i-1])*(bottom-top-length);
   }
-  return Math.round(area*100)/100;
+  return area;
+}
+const footprint=({x,y,w,d})=>[x,x+w,y,y+d];
+const roundArea=area=>Math.round(area*100)/100;
+function floorArea(model){
+  const kitchen=model.find(piece=>piece.name==='Linoleum_Kuechenboden');
+  const bath=model.find(piece=>piece.name==='Bad_Boden');
+  if(!kitchen||!bath)throw Error('Grundriss unvollständig');
+  return roundArea(uncoveredArea(planBounds(model),[kitchen,bath,...model.filter(piece=>piece.wall&&piece.z<=.02)].map(footprint)));
+}
+function paintableArea(model,includeBath){
+  const [left,right,top,bottom]=planBounds(model);
+  const bath=model.find(piece=>piece.name==='Bad_Boden');
+  const counter=model.find(piece=>piece.name==='Wandzeile_Arbeitsplatte');
+  const uppers=model.filter(piece=>/^Oberschrank_\d$/.test(piece.name));
+  const walls=model.filter(piece=>piece.wall||piece.name==='Bad_geflieste_Vorwand');
+  const builtIns=model.filter(piece=>/^(Einbauschrank_.*_Korpus|Unterschrank_|Oberschrank_\d|Kuehlschrank_Vollgroesse)/.test(piece.name));
+  const backsplash=counter&&uppers.length
+    ?[{x:counter.x,y:counter.y-.025,z:counter.z+counter.h,w:counter.w,d:.05,h:Math.min(...uppers.map(p=>p.z))-counter.z-counter.h}]
+    :[];
+  const hide=[...walls,...builtIns,...backsplash];
+  let sum=0;
+  for(const wall of walls){
+    // Project each room-facing side onto a vertical plane, then remove covered rectangles.
+    for(const [axis,along,size,span,min,max] of [['x','y','w','d',left,right],['y','x','d','w',top,bottom]]){
+      for(const direction of [-1,1]){
+        const edge=wall[axis]+(direction>0?wall[size]:0);
+        const sample=edge+direction*.002;
+        if(sample<min||sample>max)continue;
+        if(wall.material==='Duschrueckwand')continue;
+        const rangeStart=Math.max(wall[along],axis==='x'?top:left);
+        const rangeEnd=Math.min(wall[along]+wall[span],axis==='x'?bottom:right);
+        if(rangeEnd<=rangeStart)continue;
+        const crossing=hide.filter(piece=>piece!==wall&&
+          sample>piece[axis]-(piece.wall?0:.025)&&sample<piece[axis]+piece[size]+(piece.wall?0:.025));
+        const covered=crossing.map(p=>[p[along],p[along]+p[span],p.z,p.z+p.h]);
+        if(!includeBath&&sample>bath[axis]-.001&&sample<bath[axis]+bath[size]+.001){
+          covered.push([bath[along]-.001,bath[along]+bath[span]+.001,0,wall.z+wall.h]);
+        }
+        sum+=uncoveredArea([rangeStart,rangeEnd,wall.z,wall.z+wall.h],covered);
+      }
+    }
+  }
+  if(configuration.selections.ceiling==='weiss'){
+    const height=Math.max(...walls.map(p=>p.z+p.h));
+    const roofCutouts=walls.filter(p=>p.z+p.h>=height-.01);
+    if(queryAnswers().bath==='retain')roofCutouts.push(bath);
+    sum+=uncoveredArea(planBounds(model),roofCutouts.map(footprint));
+  }
+  return roundArea(sum);
 }
 async function loadParquetArea(){
   const field=$('parquet-area');
@@ -566,13 +639,17 @@ async function loadParquetArea(){
     const source=await response.text();
     const modelLine=source.split('\n').find(line=>line.startsWith('const {model,materials}='));
     const {model}=JSON.parse(modelLine.slice(modelLine.indexOf('=')+1,-1));
+    estimateModel=model;
     parquetArea=floorArea(model);
     rows.find(row=>row.id==='i-parquet').quantity=parquetArea;
     field.textContent=nf.format(parquetArea)+' m²';
+    questionnaireEffects=calculateQuestionnaire();
+    updatePaintQuestion();
     render();
   }catch{
     field.textContent='Nicht verfügbar. Parkett fehlt im Total.';
   }
 }
+updatePaintQuestion();
 render();
 loadParquetArea();
