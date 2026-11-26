@@ -594,6 +594,13 @@ try{furniturePositions=JSON.parse(localStorage.getItem(furnitureKey))??{};}catch
 const defaultPosition={dx:0,dy:0,angle:0};
 const furnitureInventoryKey='fw-moebelliste-v1';
 const furnitureCatalog=new Map(furnitureGroups);
+const furnitureTypes=new Map([
+ ['bed-main',{label:'Bett',sources:['bed-main','bed-second']}],
+ ['wardrobe-main',{label:'Kleiderschrank',sources:['wardrobe-main','wardrobe-second','wardrobe-entry']}],
+ ['fold-entry',{label:'Klappbett',sources:['fold-entry']}],
+ ['night-left',{label:'Beistelltisch',sources:['night-left','night-right']}],
+ ...['desk','coffee','sofa','dining','tv'].map(id=>[id,{label:furnitureCatalog.get(id).label,sources:[id]}])
+]);
 let removedFurniture=new Set(),addedFurniture=new Map();
 function loadFurnitureInventory(inventory){
  for(const id of addedFurniture.keys())furnitureGroups.delete(id);
@@ -605,7 +612,8 @@ function loadFurnitureInventory(inventory){
    if(typeof id!=='string'||!/^extra-[0-9a-f-]+$/.test(id)||!furnitureCatalog.has(source))continue;
    addedFurniture.set(id,source);
    const original=furnitureCatalog.get(source);
-   furnitureGroups.set(id,{...original,label:original.label+' (zusätzlich)'});
+   const type=[...furnitureTypes.values()].find(item=>item.sources.includes(source));
+   furnitureGroups.set(id,{...original,label:(type?.label??original.label)+' (zusätzlich)'});
  }
 }
 function furnitureInventory(){
@@ -1527,10 +1535,10 @@ function updateFurnitureMenus(selectedId=placementItem.value){
  if([...placementItem.options].some(o=>o.value===selectedId))placementItem.value=selectedId;
  const catalogSelection=placementCatalog.value;
  placementCatalog.replaceChildren();
- for(const [id,group] of furnitureCatalog){
-   placementCatalog.add(new Option(group.label,id));
+ for(const [id,type] of furnitureTypes){
+   placementCatalog.add(new Option(type.label,id));
  }
- if(furnitureCatalog.has(catalogSelection))placementCatalog.value=catalogSelection;
+ if(furnitureTypes.has(catalogSelection))placementCatalog.value=catalogSelection;
  for(const id of ['rotate-left','rotate-right','placement-reset','placement-remove']){
    document.getElementById(id).disabled=!placementItem.value;
  }
@@ -1611,12 +1619,13 @@ addFurnitureButton.onclick=()=>{
  if(!addFurnitureFields.hidden)placementCatalog.focus();
 };
 document.querySelector('#placement-add-go').onclick=()=>{
- const source=placementCatalog.value,room=placementRoom.value;
+ const type=furnitureTypes.get(placementCatalog.value),room=placementRoom.value;
+ const source=type.sources.find(id=>removedFurniture.has(id))??type.sources[0];
  const restore=removedFurniture.has(source);
  const id=restore?source:'extra-'+crypto.randomUUID();
  if(!restore){
    const group=furnitureCatalog.get(source);
-   furnitureGroups.set(id,{...group,label:group.label+' (zusätzlich)'});
+   furnitureGroups.set(id,{...group,label:type.label+' (zusätzlich)'});
  }
  const [x1,y1,x2,y2]=placementRooms[room],bounds=furnitureBounds(id);
  const seed={dx:(x1+x2)/2-bounds.x,dy:(y1+y2)/2-bounds.y,angle:0};
