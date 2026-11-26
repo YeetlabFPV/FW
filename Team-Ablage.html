@@ -13,13 +13,20 @@
 <h1>Team-Ablage</h1>
 <p id="team-status" role="status">Verbindung wird geprüft …</p>
 <form id="team-login" hidden>
- <label>E-Mail-Adresse <input type="email" name="email" autocomplete="email" required></label>
- <label id="otp-field" hidden>Einmalcode <input name="code" autocomplete="one-time-code" inputmode="numeric" maxlength="10"></label>
- <button type="submit">Anmeldelink oder Code anfordern</button>
+ <label>Dein Name <input name="author" autocomplete="name" maxlength="100" required></label>
+ <label>Speicher-PIN <input type="password" name="teamCode" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" required></label>
+ <button type="submit">Speichern freischalten</button>
+ <small>Eigene Einträge kannst du in diesem Browser löschen. Wenn du die Browserdaten löschst, geht diese Zuordnung verloren.</small>
 </form>
+<details id="team-admin" hidden><summary>Admin-Anmeldung</summary>
+<form id="team-admin-login">
+ <label>E-Mail-Adresse <input type="email" name="email" autocomplete="email" required></label>
+ <button type="submit">Anmeldelink senden</button>
+</form>
+</details>
 <div id="team-content" hidden>
  <div class="toolbar"><span id="team-account"></span><button type="button" id="team-refresh">Aktualisieren</button><button type="button" id="team-logout">Abmelden</button></div>
- <div class="forms">
+ <div class="forms" id="team-write-forms" hidden>
   <section><h2>Entwurf speichern</h2><form id="team-design">
    <label>Name des Entwurfs <input name="title" maxlength="140" required></label>
    <label>Erstellt von <input name="author" maxlength="100" required></label>
@@ -45,4 +52,4 @@
  <img id="team-photo-image" alt=""><p id="team-photo-caption" aria-live="polite"></p>
 </dialog>
 <script src="Team-Konfiguration.js"></script>
-<script type="module" src="Team-Ablage.js"></script>
+<script type="module" src="Team-Ablage.js?v=2"></script>

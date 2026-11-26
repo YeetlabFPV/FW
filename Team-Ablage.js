@@ -6,8 +6,14 @@ const content=get('team-content');
 const designForm=get('team-design');
 const renderForm=get('team-rendering');
 const viewer=get('team-photo');
+const authorKey='fw-team-author';
+function rememberAuthor(author){
+  try{localStorage.setItem(authorKey,author);}catch{}
+  login.elements.author.value=designForm.elements.author.value=renderForm.elements.author.value=author;
+}
+try{rememberAuthor(localStorage.getItem(authorKey)??'');}catch{}
 const maxImageSize=4*1024*1024;
-let client,user,draft,renderings=[],photoIndex=0,photoRequest=0;
+let client,user,isAdmin=false,draft,renderings=[],photoIndex=0,photoRequest=0;
 
 function showStatus(message){status.textContent=message;}
 function validDesign(value){
@@ -54,7 +60,7 @@ function imageBase64(file){
   });
 }
 async function deleteEntry(entry){
-  if(entry.owner_id!==user?.id||!confirm('«'+entry.title+'» aus der gemeinsamen Ablage löschen?'))return;
+  if((!isAdmin&&entry.owner_id!==user?.id)||!confirm('«'+entry.title+'» aus der gemeinsamen Ablage löschen?'))return;
   const removed=data(await client.from('fw_entries').delete().eq('id',entry.id).select('id'),
     'Der Eintrag konnte nicht gelöscht werden.');
   if(!removed.length)throw new Error('Der Eintrag ist nicht mehr vorhanden oder gehört einem anderen Konto.');
@@ -69,7 +75,7 @@ async function showPhoto(index){
   const image=get('team-photo-image');
   image.removeAttribute('src');
   get('team-photo-caption').textContent=entry.title+' · '+(photoIndex+1)+' / '+renderings.length;
-  get('team-photo-delete').hidden=entry.owner_id!==user.id;
+  get('team-photo-delete').hidden=!isAdmin&&entry.owner_id!==user?.id;
   if(!viewer.open)viewer.showModal();
   try{
     const photo=data(await client.from('fw_entries').select('mime,image_data').eq('id',entry.id).single(),
@@ -95,17 +101,17 @@ function card(entry){
     sessionStorage.setItem(loadKey,JSON.stringify(payload));
     location.href='Kueche-Wohnen-3D.html?team=laden';
   }):action('Bild öffnen',()=>showPhoto(renderings.findIndex(item=>item.id===entry.id))));
-  if(entry.owner_id===user.id)actions.append(action('Löschen',()=>deleteEntry(entry)));
+  if(isAdmin||entry.owner_id===user?.id)actions.append(action('Löschen',()=>deleteEntry(entry)));
   article.append(heading,line,actions);
   return article;
 }
 async function refresh(){
-  if(!user)return;
-  if(!data(await client.rpc('fw_team_member'),'Die Mitgliedschaft konnte nicht geprüft werden.')){
-    content.hidden=true;
-    showStatus('Dieses Konto ist noch nicht für das Projekt freigeschaltet.');
-    return;
-  }
+  isAdmin=Boolean(user&&!user.is_anonymous)&&data(await client.rpc('fw_is_admin'),'Die Admin-Rechte konnten nicht geprüft werden.');
+  const canWrite=isAdmin||Boolean(user)&&data(await client.rpc('fw_team_member'),'Die Freischaltung konnte nicht geprüft werden.');
+  login.hidden=canWrite;
+  get('team-admin').hidden=isAdmin;
+  get('team-write-forms').hidden=!canWrite;
+  get('team-logout').hidden=!user||Boolean(user.is_anonymous);
   const entries=[];
   for(let offset=0;;offset+=250){
     const page=data(await client.from('fw_entries').select('id,owner_id,author,title,kind,source,created_at,design_id')
@@ -113,7 +119,6 @@ async function refresh(){
     entries.push(...page);
     if(page.length<250)break;
   }
-  if(!user)return;
   const designs=entries.filter(entry=>entry.kind==='design');
   renderings=entries.filter(entry=>entry.kind==='rendering');
   const titles=new Map(designs.map(entry=>[entry.id,entry.title]));
@@ -137,8 +142,7 @@ async function setUser(session){
   user=session?.user??null;
   login.hidden=Boolean(user);
   content.hidden=true;
-  if(!user){showStatus('Melde dich mit deiner freigeschalteten E-Mail-Adresse an.');return;}
-  get('team-account').textContent=user.email;
+  get('team-account').textContent=user?.email??'';
   await refresh();
 }
 async function initialize(){
@@ -150,24 +154,34 @@ async function initialize(){
   const {createClient}=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/+esm');
   client=createClient(config.url,config.publishableKey);
   await setUser(data(await client.auth.getSession(),'Die Anmeldung konnte nicht geprüft werden.').session);
+  if(validDesign(draft)&&!get('team-write-forms').hidden&&designForm.elements.author.value)designForm.requestSubmit();
   client.auth.onAuthStateChange((_event,session)=>{
     if((session?.user?.id??null)===user?.id||(!session&&!user))return;
     setTimeout(()=>setUser(session).catch(error=>showStatus(error.message)),0);
   });
 }
 bindForm(login,async form=>{
-  const email=String(form.get('email')).trim();
-  const token=String(form.get('code')).trim();
-  if(token){
-    const auth=data(await client.auth.verifyOtp({email,token,type:'email'}),'Der Code ist ungültig oder abgelaufen.');
-    await setUser(auth.session);
-    return;
+  const author=String(form.get('author')).trim();
+  if(!author)throw new Error('Gib deinen Namen ein.');
+  const teamCode=String(form.get('teamCode')).trim();
+  if(!user){
+    const auth=data(await client.auth.signInAnonymously(),'Die Browsersitzung konnte nicht gestartet werden.');
+    user=auth.user;
   }
-  data(await client.auth.signInWithOtp({email,options:{shouldCreateUser:false,emailRedirectTo:new URL('Team-Ablage.html',location.href).href}}),
-    'Die Anmeldung konnte nicht gestartet werden. Prüfe, ob du eingeladen wurdest.');
-  get('otp-field').hidden=false;
-  login.querySelector('button').textContent='Anmelden oder Link erneut senden';
-  showStatus('Prüfe deine E-Mail und öffne den Anmeldelink oder gib den Einmalcode ein.');
+  if(!data(await client.rpc('fw_join_team',{team_code:teamCode}),'Die Freischaltung ist fehlgeschlagen.')){
+    throw new Error('Der Speicher-PIN ist ungültig.');
+  }
+  login.reset();
+  rememberAuthor(author);
+  await setUser(data(await client.auth.getSession(),'Die Browsersitzung konnte nicht geprüft werden.').session);
+  if(validDesign(draft))designForm.requestSubmit();
+});
+bindForm(get('team-admin-login'),async form=>{
+  const email=String(form.get('email')).trim();
+  data(await client.auth.signInWithOtp({email,options:{shouldCreateUser:true,
+    emailRedirectTo:new URL('Team-Ablage.html',location.href).href}}),
+    'Der Anmeldelink konnte nicht gesendet werden.');
+  showStatus('Prüfe deine E-Mail und öffne den Anmeldelink in einem eigenen Browserprofil, wenn du dort deine bisherige Sitzung behalten möchtest.');
 });
 bindForm(designForm,async form=>{
   const file=form.get('file');
@@ -181,7 +195,7 @@ bindForm(designForm,async form=>{
   sessionStorage.removeItem(draftKey);
   draft=null;
   designForm.reset();
-  renderForm.elements.author.value=author;
+  rememberAuthor(author);
   get('team-draft').textContent='';
   await refresh();
   get('team-render-design').value=saved.id;

@@ -117,7 +117,7 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
 <p class="preset-suggestion" id="preset-suggestion"></p>
 <button type="submit">Kombination speichern</button>
 <label class="choice">Gespeicherte Kombinationen<select id="preset-list"><option value="">Kombination wählen</option></select></label>
-<div class="preset-actions"><button type="button" id="preset-load" disabled>Laden</button><button type="button" id="preset-export">JSON exportieren</button><button type="button" id="preset-import">JSON importieren</button><button type="button" id="preset-default">Standardanordnung laden</button><input type="file" id="preset-file" accept=".json,application/json" hidden></div>
+<div class="preset-actions"><button type="button" id="preset-load" disabled>Laden</button><button type="button" id="preset-share">Konfiguration speichern</button><button type="button" id="preset-export">JSON exportieren</button><button type="button" id="preset-import">JSON importieren</button><button type="button" id="preset-default">Standardanordnung laden</button><input type="file" id="preset-file" accept=".json,application/json" hidden></div>
 <p id="preset-status" role="status"></p>
 </form>
 </details>
@@ -2141,6 +2141,15 @@ presetFile.addEventListener('change',async()=>{
    ?'JSON importiert. '+adjusted+' Möbelposition(en) ausserhalb der Raumgrenzen oder ohne zugehöriges Möbelstück wurden zurückgesetzt.'
    :'Kombination aus JSON geladen.';
 });
+document.querySelector('#preset-share').addEventListener('click',()=>{
+ try{
+   const name=presetName.value.trim()||suggestedPresetName();
+   sessionStorage.setItem('fw-team-draft',JSON.stringify(configuration(name)));
+   location.href='Team-Ablage.html';
+ }catch{
+   presetStatus.textContent='Der Entwurf konnte nicht an die Team-Ablage übergeben werden.';
+ }
+});
 document.querySelector('#preset-export').addEventListener('click',()=>{
  const name=presetName.value.trim()||suggestedPresetName();
  const file=new Blob([JSON.stringify(configuration(name),null,2)+'\n'],{type:'application/json'});
@@ -2531,4 +2540,11 @@ if(startParams.get('bath')==='bestand')materialControls.get('bath-tile').apply('
 select(Object.hasOwn(views,requestedRoom)?requestedRoom:'Wohnung');
 if(startParams.get('modus')==='begehen')setWalking(true);
 }
+try{
+ const shared=JSON.parse(sessionStorage.getItem('fw-team-load'));
+ if(shared?.format==='fw-3d-materials'&&shared.version===1&&shared.selections){
+   applyConfiguration(shared);
+   sessionStorage.removeItem('fw-team-load');
+ }
+}catch{}
 </script>
