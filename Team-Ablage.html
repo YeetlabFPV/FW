@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="de-CH">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Team-Ablage · Wohnungsumbau</title>
+<link rel="stylesheet" href="Projekt-Navigation.css">
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f3f2ec;color:#273b32;font:16px/1.5 system-ui,sans-serif}main{width:min(100% - 2rem,68rem);margin:2rem auto}h1{font-size:clamp(2rem,6vw,3.4rem);line-height:1.1}h2{font-size:1.25rem}form,.records article{border:1px solid #d5ddd3;background:white;border-radius:12px;padding:1rem}form label{display:grid;gap:.25rem}input,select,button{font:inherit;color:inherit;padding:.45rem .6rem;border:1px solid #b6c7ba;border-radius:7px;max-width:100%}button{background:#e6ede5;cursor:pointer}button:disabled{opacity:.6;cursor:wait}form{display:grid;gap:.65rem}form button{justify-self:start}.forms,.records{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:.8rem}.records h3,.records p{margin:0 0 .5rem}.actions{display:flex;flex-wrap:wrap;gap:.5rem}.records img{width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:7px}.toolbar{display:flex;gap:.65rem;align-items:center;flex-wrap:wrap}dialog{max-width:calc(100% - 1rem);max-height:calc(100% - 1rem);margin:auto;border:0;border-radius:12px;background:#18241e;color:white}dialog img{display:block;margin:.6rem auto 0;max-width:88vw;max-height:76vh;object-fit:contain}dialog button{color:#273b32}dialog::backdrop{background:#152017df}[hidden]{display:none!important}
+</style>
+<main>
+<nav class="project-nav" aria-label="Seitennavigation"><a href="index.html">Startseite</a> <a href="Kueche-Wohnen-3D.html">3D-Konfigurator</a> <a href="Team-Ablage.html" aria-current="page">Team-Ablage</a></nav>
+<h1>Team-Ablage</h1>
+<p id="team-status" role="status">Verbindung wird geprüft …</p>
+<form id="team-login" hidden>
+ <label>E-Mail-Adresse <input type="email" name="email" autocomplete="email" required></label>
+ <label id="otp-field" hidden>Einmalcode <input name="code" autocomplete="one-time-code" inputmode="numeric" maxlength="10"></label>
+ <button type="submit">Anmeldelink oder Code anfordern</button>
+</form>
+<div id="team-content" hidden>
+ <div class="toolbar"><span id="team-account"></span><button type="button" id="team-refresh">Aktualisieren</button><button type="button" id="team-logout">Abmelden</button></div>
+ <div class="forms">
+  <section><h2>Entwurf speichern</h2><form id="team-design">
+   <label>Name des Entwurfs <input name="title" maxlength="140" required></label>
+   <label>Erstellt von <input name="author" maxlength="100" required></label>
+   <label>FW-JSON <input type="file" name="file" accept=".json,application/json"></label>
+   <small id="team-draft"></small>
+   <button type="submit">Entwurf speichern</button>
+  </form></section>
+  <section><h2>Renderings hinzufügen</h2><form id="team-rendering">
+   <label>Titel <input name="title" maxlength="140" required></label>
+   <label>Erstellt von <input name="author" maxlength="100" required></label>
+   <label>Quelle <select name="source"><option>AI</option><option>Blender</option></select></label>
+   <label>Zugehöriger Entwurf <select name="design_id" id="team-render-design"></select></label>
+   <label>Bilder bis 4 MB pro Datei <input type="file" name="file" accept="image/jpeg,image/png,image/webp" multiple required></label>
+   <button type="submit">Renderings speichern</button>
+  </form></section>
+ </div>
+ <h2>Entwürfe</h2><div id="team-design-list" class="records"></div>
+ <h2>Renderings</h2><div id="team-render-list" class="records"></div>
+</div>
+</main>
+<dialog id="team-photo" aria-label="Gemeinsame Fotogalerie">
+ <div class="toolbar"><button type="button" id="team-photo-prev">‹ Zurück</button><button type="button" id="team-photo-next">Weiter ›</button><button type="button" id="team-photo-delete" hidden>Löschen</button><button type="button" id="team-photo-close" autofocus>Schliessen</button></div>
+ <img id="team-photo-image" alt=""><p id="team-photo-caption" aria-live="polite"></p>
+</dialog>
+<script src="Team-Konfiguration.js"></script>
+<script type="module" src="Team-Ablage.js"></script>

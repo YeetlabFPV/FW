@@ -7,10 +7,21 @@
 <link rel="stylesheet" href="Projekt-Navigation.css">
 <style>
 *{box-sizing:border-box}body{margin:0;background:#f3f2ec;color:#273b32;font:16px/1.55 system-ui,sans-serif}main{width:min(100% - 2rem,80rem);margin:clamp(2rem,8vw,7rem) auto}h1{margin:0;font-size:clamp(2rem,6vw,4rem);letter-spacing:-.05em;line-height:1.1}p{margin:.75rem 0 0}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:16px;margin-top:32px}.card{background:white;border:1px solid #d6ded4;border-radius:15px;padding:24px}.card h2{margin:0;font-size:1.3rem}.card a{display:inline-block;margin-top:16px;padding:9px 14px;background:#395c4d;color:white;border-radius:8px;text-decoration:none;font-weight:650}.card a:focus-visible{outline:3px solid #a46c30;outline-offset:3px}
-.gallery{margin-top:44px}.gallery h2{margin-bottom:0}.images{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:16px;margin-top:16px}.images figure{margin:0;background:white;border:1px solid #d6ded4;border-radius:12px;overflow:hidden}.images img{display:block;width:100%;aspect-ratio:3/2;object-fit:cover}.images figcaption{padding:10px 14px;font-weight:600}</style>
+.gallery{margin-top:44px}.gallery h2{margin-bottom:0}.images{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:16px;margin-top:16px}.images figure{margin:0;background:white;border:1px solid #d6ded4;border-radius:12px;overflow:hidden}.images img{display:block;width:100%;aspect-ratio:3/2;object-fit:cover}.images figcaption{padding:10px 14px;font-weight:600}
+[hidden]{display:none!important}.images a{display:block}.images a:focus-visible{outline:3px solid #a46c30;outline-offset:-4px}
+#photo-viewer{width:min(100% - 1rem,90rem);max-width:none;max-height:calc(100% - 1rem);margin:auto;padding:.7rem;border:0;border-radius:12px;background:#17201c;color:white}
+#photo-viewer::backdrop{background:#0e1512dc}
+.photo-toolbar{display:flex;justify-content:space-between;gap:.5rem;align-items:center}
+.photo-toolbar button{min-height:42px;padding:.4rem .7rem;border:1px solid #799087;border-radius:7px;background:#2b3a33;color:white;font:inherit;cursor:pointer}
+.photo-toolbar button:focus-visible{outline:2px solid #f3cc83;outline-offset:2px}
+#photo-viewer figure{margin:.55rem 0 0}
+#photo-viewer img{display:block;width:100%;height:min(75vh,75dvh);object-fit:contain}
+#photo-caption{text-align:center;padding:.4rem}
+</style>
 <main>
 <nav class="project-nav" aria-label="Seitennavigation"><a href="index.html" data-project="start" aria-current="page">Startseite</a> <a href="Wohnen-und-Bad-360.html" data-project="blender">Blender-Ansichten (360°)</a> <a href="Kueche-Wohnen-3D.html" data-project="model">3D-Konfigurator</a> <a href="Kueche-Wohnen-3D.html?modus=begehen" data-project="walk">Begehung</a> <a href="Kostenschaetzung.html" data-project="cost">Kostenschätzung</a></nav>
 <h1>Umbau · Küche, Stube und Bad</h1>
+<p><a href="Team-Ablage.html">Team-Ablage</a></p>
 <p>Schaut euch den Entwurf aus verschiedenen Blickwinkeln an und vergleicht Farben und Bodenbeläge im 3D-Modell.</p>
 <div class="cards">
 <section class="card"><h2>Blender-Ansichten (360°)</h2><p>Gerenderte Panoramen an festen Standpunkten. Vergleiche die Blender-Varianten im selben Raum.</p><a href="Wohnen-und-Bad-360.html">Blender-Ansichten öffnen</a></section>
@@ -18,7 +29,99 @@
 <section class="card"><h2>Begehung</h2><p>Die aktuelle Einrichtung frei aus Augenhöhe erkunden.</p><a href="Kueche-Wohnen-3D.html?modus=begehen">Begehung starten</a></section>
 <section class="card"><h2>Kostenschätzung</h2><p>Umbaukosten nach Bereichen vergleichen, Mengen und Preise anpassen und eigene Positionen ergänzen.</p><a href="Kostenschaetzung.html">Kostenschätzung öffnen</a></section>
 </div>
+<section class="gallery" id="wohnungsrenderings"><h2>Taubenblau · Stein · Eisblau</h2><p>Fotorealistische KI-Bilder auf Basis des gespeicherten Entwurfs. Bilder kannst du in der Galerie auf diesem Gerät ausblenden; nach Anschluss der Team-Ablage eigene Bilder dauerhaft löschen.</p><div class="images"><figure><a href="KI-Eisblau/Kueche.jpg"><img loading="lazy" src="KI-Eisblau/Kueche.jpg" alt="Küche im Entwurf Taubenblau · Stein · Eisblau"></a><figcaption>Küche</figcaption></figure><figure><a href="KI-Eisblau/Stube.jpg"><img loading="lazy" src="KI-Eisblau/Stube.jpg" alt="Stube und Essplatz im Entwurf Taubenblau · Stein · Eisblau"></a><figcaption>Stube und Essplatz</figcaption></figure><figure><a href="KI-Eisblau/Bad.jpg"><img loading="lazy" src="KI-Eisblau/Bad.jpg" alt="Bad im Entwurf Taubenblau · Stein · Eisblau"></a><figcaption>Bad</figcaption></figure><figure><a href="KI-Eisblau/Schlafzimmer.jpg"><img loading="lazy" src="KI-Eisblau/Schlafzimmer.jpg" alt="Schlafzimmer 2 im Entwurf Taubenblau · Stein · Eisblau"></a><figcaption>Schlafzimmer 2</figcaption></figure><figure><a href="KI-Eisblau/Essplatz-zur-Kueche.jpg"><img loading="lazy" src="KI-Eisblau/Essplatz-zur-Kueche.jpg" alt="Essplatz mit vier schwarzen Schalenstühlen, Holztisch und Blick zur taubenblauen Küche"></a><figcaption>Essplatz zur Küche</figcaption></figure><figure><a href="KI-Eisblau/Kueche-zur-Stube.jpg"><img loading="lazy" src="KI-Eisblau/Kueche-zur-Stube.jpg" alt="Blick von der Küche in die Stube mit Esstisch, vier schwarzen Stühlen und salbeigrünem Ecksofa"></a><figcaption>Küche zur Stube</figcaption></figure><figure><a href="KI-Eisblau/Bad-vom-Eingang.jpg"><img loading="lazy" src="KI-Eisblau/Bad-vom-Eingang.jpg" alt="Bad vom Eingang mit eisblauer Duschrückwand und dunklem Bestandsboden"></a><figcaption>Bad vom Eingang</figcaption></figure></div></section>
 <section class="gallery" id="ki-studien"><h2>Neue fotorealistische KI-Bildstudien</h2><p>Atmosphäre und Materialien als Vorschau. Für genaue Anordnung und Masse ist das 3D-Modell massgebend.</p><div class="images"><figure><a href="KI-Studie-Kueche-Wohnen.png"><img loading="lazy" src="KI-Studie-Kueche-Wohnen.png" alt="Fotorealistische KI-Bildstudie von Küche und Stube"></a><figcaption>Küche und Stube</figcaption></figure><figure><a href="KI-Studie-Stube.png"><img loading="lazy" src="KI-Studie-Stube.png" alt="Fotorealistische KI-Bildstudie der Stube mit Sofa, Tisch und TV"></a><figcaption>Stube mit Essplatz</figcaption></figure><figure><a href="KI-Studie-Bad-Neu.png"><img loading="lazy" src="KI-Studie-Bad-Neu.png" alt="Fotorealistische KI-Bildstudie vom Bad mit hellem Boden"></a><figcaption>Bad mit hellem Boden</figcaption></figure><figure><a href="KI-Studie-Bad-Bestandsboden.png"><img loading="lazy" src="KI-Studie-Bad-Bestandsboden.png" alt="Fotorealistische KI-Bildstudie vom Bad mit dunklen Bestandsfliesen"></a><figcaption>Bad mit Bestandsboden</figcaption></figure></div></section>
-<section class="gallery" id="neue-renderings"><h2>Aktuelle Renderings</h2><div class="images"><figure><a href="Rendering-Neu-Kueche.jpg"><img loading="lazy" src="Rendering-Neu-Kueche.jpg" alt="Küche mit verschobenen Spots und Abwaschtuchhalter"></a><figcaption>Küche</figcaption></figure><figure><a href="Rendering-Neu-Wohnen.jpg"><img loading="lazy" src="Rendering-Neu-Wohnen.jpg" alt="Stube mit Sofa und Bergblick"></a><figcaption>Stube</figcaption></figure><figure><a href="Rendering-Neu-Bad.jpg"><img loading="lazy" src="Rendering-Neu-Bad.jpg" alt="Bad mit neuem Waschtisch und Badetuchhalter"></a><figcaption>Bad</figcaption></figure><figure><a href="Rendering-Neu-Flur.jpg"><img loading="lazy" src="Rendering-Neu-Flur.jpg" alt="Hellere Flurbeleuchtung mit Hakenleiste und schwebender Schuhablage"></a><figcaption>Flur</figcaption></figure><figure><a href="Rendering-Neu-Waschtisch.jpg"><img loading="lazy" src="Rendering-Neu-Waschtisch.jpg" alt="Salbeigrüner Waschtisch mit dunklen Bestandsfliesen und hinterleuchtetem Spiegel"></a><figcaption>Waschtisch mit Bestandsfliesen</figcaption></figure></div></section>
-<section class="gallery" id="renderings"><h2>Bildstudien zur Parkettvariante</h2><p>Vier fotorealistische Bildstudien mit frei gestalteter Berglandschaft.</p><div class="images"><figure><a href="Rendering-Kueche-aus-der-Stube.jpg"><img loading="lazy" src="Rendering-Kueche-aus-der-Stube.jpg" alt="Küche aus der Stube"></a><figcaption>Küche aus der Stube</figcaption></figure><figure><a href="Rendering-Kueche-vom-Fenster.jpg"><img loading="lazy" src="Rendering-Kueche-vom-Fenster.jpg" alt="Küche vom Fenster"></a><figcaption>Küche vom Fenster</figcaption></figure><figure><a href="Rendering-Stube-mit-Bergblick.jpg"><img loading="lazy" src="Rendering-Stube-mit-Bergblick.jpg" alt="Stube mit Bergblick"></a><figcaption>Stube mit Bergblick</figcaption></figure><figure><a href="Rendering-Bad.jpg"><img loading="lazy" src="Rendering-Bad.jpg" alt="Bad mit Aufsatzlavabo"></a><figcaption>Bad mit Aufsatzlavabo</figcaption></figure></div></section><section class="gallery"><h2>Frühere KI-Renderings</h2><p>Die Bilder zeigen die ungefähre Wirkung von Farben, Materialien und Licht. Die aktuelle Raumaufteilung seht ihr im Rundgang.</p><div class="images"><figure><a href="Stube-Kueche-Salbeigruen.png"><img loading="lazy" src="Stube-Kueche-Salbeigruen.png" alt="Küche in Salbeigrün"></a><figcaption>Küche in Salbeigrün</figcaption></figure><figure><a href="Stube-Blick-zum-Fenster.png"><img loading="lazy" src="Stube-Blick-zum-Fenster.png" alt="Blick zum bodentiefen Fenster"></a><figcaption>Blick zum bodentiefen Fenster</figcaption></figure><figure><a href="Stube-Blick-zur-Kueche.png"><img loading="lazy" src="Stube-Blick-zur-Kueche.png" alt="Frühere Farbvariante der Küche"></a><figcaption>Frühere Farbvariante der Küche</figcaption></figure></div></section></main>
+<section class="gallery" id="neue-renderings"><h2>Frühere Renderings</h2><div class="images"><figure><a href="Rendering-Neu-Kueche.jpg"><img loading="lazy" src="Rendering-Neu-Kueche.jpg" alt="Küche mit verschobenen Spots und Abwaschtuchhalter"></a><figcaption>Küche</figcaption></figure><figure><a href="Rendering-Neu-Wohnen.jpg"><img loading="lazy" src="Rendering-Neu-Wohnen.jpg" alt="Stube mit Sofa und Bergblick"></a><figcaption>Stube</figcaption></figure><figure><a href="Rendering-Neu-Bad.jpg"><img loading="lazy" src="Rendering-Neu-Bad.jpg" alt="Bad mit neuem Waschtisch und Badetuchhalter"></a><figcaption>Bad</figcaption></figure><figure><a href="Rendering-Neu-Flur.jpg"><img loading="lazy" src="Rendering-Neu-Flur.jpg" alt="Hellere Flurbeleuchtung mit Hakenleiste und schwebender Schuhablage"></a><figcaption>Flur</figcaption></figure><figure><a href="Rendering-Neu-Waschtisch.jpg"><img loading="lazy" src="Rendering-Neu-Waschtisch.jpg" alt="Salbeigrüner Waschtisch mit dunklen Bestandsfliesen und hinterleuchtetem Spiegel"></a><figcaption>Waschtisch mit Bestandsfliesen</figcaption></figure></div></section>
+<section class="gallery" id="renderings"><h2>Bildstudien zur Parkettvariante</h2><p>Vier fotorealistische Bildstudien mit frei gestalteter Berglandschaft.</p><div class="images"><figure><a href="Rendering-Kueche-aus-der-Stube.jpg"><img loading="lazy" src="Rendering-Kueche-aus-der-Stube.jpg" alt="Küche aus der Stube"></a><figcaption>Küche aus der Stube</figcaption></figure><figure><a href="Rendering-Kueche-vom-Fenster.jpg"><img loading="lazy" src="Rendering-Kueche-vom-Fenster.jpg" alt="Küche vom Fenster"></a><figcaption>Küche vom Fenster</figcaption></figure><figure><a href="Rendering-Stube-mit-Bergblick.jpg"><img loading="lazy" src="Rendering-Stube-mit-Bergblick.jpg" alt="Stube mit Bergblick"></a><figcaption>Stube mit Bergblick</figcaption></figure><figure><a href="Rendering-Bad.jpg"><img loading="lazy" src="Rendering-Bad.jpg" alt="Bad mit Aufsatzlavabo"></a><figcaption>Bad mit Aufsatzlavabo</figcaption></figure></div></section><section class="gallery"><h2>Frühere KI-Renderings</h2><p>Die Bilder zeigen die ungefähre Wirkung von Farben, Materialien und Licht. Die aktuelle Raumaufteilung seht ihr im Rundgang.</p><div class="images"><figure><a href="Stube-Kueche-Salbeigruen.png"><img loading="lazy" src="Stube-Kueche-Salbeigruen.png" alt="Küche in Salbeigrün"></a><figcaption>Küche in Salbeigrün</figcaption></figure><figure><a href="Stube-Blick-zum-Fenster.png"><img loading="lazy" src="Stube-Blick-zum-Fenster.png" alt="Blick zum bodentiefen Fenster"></a><figcaption>Blick zum bodentiefen Fenster</figcaption></figure><figure><a href="Stube-Blick-zur-Kueche.png"><img loading="lazy" src="Stube-Blick-zur-Kueche.png" alt="Frühere Farbvariante der Küche"></a><figcaption>Frühere Farbvariante der Küche</figcaption></figure></div></section><p hidden id="restore-photos-container"><button type="button" id="restore-photos">Ausgeblendete Bilder wieder anzeigen</button></p>
+</main>
+<dialog id="photo-viewer" aria-label="Fotogalerie">
+ <div class="photo-toolbar">
+  <button type="button" id="photo-prev">‹ Zurück</button>
+  <span id="photo-count" aria-live="polite"></span>
+  <button type="button" id="photo-next">Weiter ›</button>
+  <button type="button" id="photo-close" autofocus>Schliessen</button>
+ </div>
+ <div class="photo-toolbar"><button type="button" id="photo-hide">Auf diesem Gerät ausblenden</button></div>
+ <figure><img id="photo-image" alt=""><figcaption id="photo-caption"></figcaption></figure>
+</dialog>
+<script>
+const viewer=document.querySelector('#photo-viewer');
+const photo=document.querySelector('#photo-image');
+const closePhoto=document.querySelector('#photo-close');
+const hiddenKey='fw-gallery-hidden-v1';
+let hidden=new Set();
+try{
+ const saved=JSON.parse(localStorage.getItem(hiddenKey));
+ if(Array.isArray(saved))hidden=new Set(saved);
+}catch{}
+const galleryLinks=[...document.querySelectorAll('.gallery figure a')];
+const photoKey=link=>link.getAttribute('href');
+function syncHidden(){
+ for(const link of galleryLinks)link.closest('figure').hidden=hidden.has(photoKey(link));
+ document.querySelector('#restore-photos-container').hidden=hidden.size===0;
+ try{localStorage.setItem(hiddenKey,JSON.stringify([...hidden]));}catch{}
+}
+syncHidden();
+let gallery=[],photoIndex=0,trigger=null;
+function showPhoto(index){
+ photoIndex=(index+gallery.length)%gallery.length;
+ const link=gallery[photoIndex];
+ photo.src=link.href;
+ photo.alt=link.querySelector('img').alt;
+ document.querySelector('#photo-caption').textContent=link.closest('figure').querySelector('figcaption').textContent;
+ document.querySelector('#photo-count').textContent=(photoIndex+1)+' / '+gallery.length;
+}
+for(const section of document.querySelectorAll('.gallery')){
+ const links=[...section.querySelectorAll('figure a')];
+ links.forEach(link=>link.addEventListener('click',event=>{
+   if(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
+   event.preventDefault();
+   gallery=links.filter(item=>!hidden.has(photoKey(item)));
+   trigger=link;
+   showPhoto(gallery.indexOf(link));
+   viewer.showModal();
+ }));
+}
+document.querySelector('#photo-prev').addEventListener('click',()=>showPhoto(photoIndex-1));
+document.querySelector('#photo-next').addEventListener('click',()=>showPhoto(photoIndex+1));
+closePhoto.addEventListener('click',()=>viewer.close());
+document.querySelector('#photo-hide').addEventListener('click',()=>{
+ hidden.add(photoKey(gallery[photoIndex]));
+ gallery.splice(photoIndex,1);
+ syncHidden();
+ if(gallery.length)showPhoto(photoIndex);
+ else viewer.close();
+});
+document.querySelector('#restore-photos').addEventListener('click',()=>{
+ hidden.clear();
+ syncHidden();
+});
+viewer.addEventListener('keydown',event=>{
+ if(event.key==='ArrowLeft'||event.key==='ArrowRight'){
+   event.preventDefault();
+   showPhoto(photoIndex+(event.key==='ArrowLeft'?-1:1));
+ }
+});
+viewer.addEventListener('click',event=>{
+ const rect=viewer.getBoundingClientRect();
+ if(event.target===viewer&&(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom))viewer.close();
+});
+let swipeStart=null;
+photo.addEventListener('touchstart',event=>{
+ const touch=event.changedTouches[0];
+ swipeStart=[touch.clientX,touch.clientY];
+},{passive:true});
+photo.addEventListener('touchend',event=>{
+ if(!swipeStart)return;
+ const touch=event.changedTouches[0];
+ const dx=touch.clientX-swipeStart[0],dy=touch.clientY-swipeStart[1];
+ swipeStart=null;
+ if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.5)showPhoto(photoIndex+(dx<0?1:-1));
+},{passive:true});
+photo.addEventListener('touchcancel',()=>{swipeStart=null;});
+viewer.addEventListener('close',()=>{
+ if(trigger?.closest('figure').hidden)document.querySelector('#restore-photos').focus();
+ else trigger?.focus();
+});
+</script>
 </html>
