@@ -40,10 +40,10 @@ main.expanded{position:fixed;inset:0;z-index:10;width:100vw}
 </style>
 </head>
 <body>
-<nav class="project-nav" aria-label="Seitennavigation"><a href="index.html" data-project="start">Startseite</a> <a href="Wohnen-und-Bad-360.html" data-project="blender" aria-current="page">Blender-Ansichten (360°)</a> <a href="Kueche-Wohnen-3D.html" data-project="model">3D-Konfigurator</a> <a href="Kueche-Wohnen-3D.html?modus=begehen" data-project="walk">Begehung</a> <a href="Kostenschaetzung.html" data-project="cost">Kostenschätzung</a></nav>
 <header><h1>Blender-Ansichten (360°)</h1><small id="render-state" role="status">Blender-Cycles</small></header>
 <main>
-<p class="view-help">Hier wechselst du zwischen festen Standpunkten. Frei gehen kannst du in der <a data-project="walk" href="Kueche-Wohnen-3D.html?modus=begehen">Begehung im 3D-Konfigurator</a>.</p>
+<nav class="project-nav" aria-label="Seitennavigation"><a href="index.html" data-project="start">Startseite</a> <a href="Wohnen-und-Bad-360.html" data-project="blender" aria-current="page">Blender-Ansichten (360°)</a> <a href="Kueche-Wohnen-3D.html" data-project="model">3D-Konfigurator</a> <a href="Kueche-Wohnen-3D.html?modus=begehen" data-project="walk">Begehung</a> <a href="Kostenschaetzung.html" data-project="cost">Kostenschätzung</a></nav>
+<p class="view-help">Wechsle zwischen festen Standpunkten oder öffne die <a id="blender-walk" href="Begehung-Taubenblau-2/">Blender-Begehung · Taubenblau 2</a>, um diese Variante frei zu erkunden.</p>
 <nav aria-label="Panorama einstellen">
 <div class="group" aria-label="Raum"><button data-room="wohn">Stube</button><button data-room="essen">Essplatz</button><button data-room="kueche">Küche</button><button data-room="flur">Flur</button><button data-room="bad">Bad</button></div>
 <div class="group"><label>Blender-Variante <select id="blender-variant">
@@ -168,6 +168,7 @@ function select(next,material,heading){
  document.querySelectorAll('[data-floor]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.floor===floor));
  document.querySelectorAll('[data-bathfloor]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.bathfloor===bathFloor));
  document.querySelectorAll('[data-project="walk"]').forEach(link=>{link.href='Kueche-Wohnen-3D.html?modus=begehen&raum='+room;});
+ document.querySelector('#blender-walk').href='Begehung-Taubenblau-2/?raum='+room;
  const stock=room==='bad'&&bathFloor==='bestand';
  const key=stock&&hasStockRender()?'bad-'+finish+'-bestand':room+'-'+finish+'-'+floor;
  document.querySelectorAll('[data-base-options]').forEach(group=>{group.hidden=variant!=='bisher';});
