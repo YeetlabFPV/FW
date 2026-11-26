@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Küche, Wohnen und Bad · 360°</title>
+<title>Blender-Ansichten (360°) · Wohnung</title>
+<link rel="stylesheet" href="Projekt-Navigation.css">
 <style>
 :root{font:16px/1.4 system-ui,sans-serif;color:#283b34;background:#f3f2eb}
 *{box-sizing:border-box}
@@ -35,11 +36,14 @@ main.expanded{position:fixed;inset:0;z-index:10;width:100vw}
 @media(max-width:620px){body{padding:8px}main{height:calc(100dvh - 90px)}nav{gap:5px;font-size:13px}.actions{margin-left:0}}
 #blender-variant{font:inherit;color:inherit;background:#fafbf8;border:1px solid #cad6cb;border-radius:8px;padding:6px}
 [data-base-options][hidden],#panorama-file[hidden]{display:none}
+.view-help{margin:.6rem 0 0;padding:0 .75rem;font-size:.88rem;color:#4a5b51}
 </style>
 </head>
 <body>
-<header><h1>Wohnen und Bad in 360°</h1><small id="render-state" role="status">Blender-Cycles</small></header>
+<nav class="project-nav" aria-label="Seitennavigation"><a href="index.html" data-project="start">Startseite</a> <a href="Wohnen-und-Bad-360.html" data-project="blender" aria-current="page">Blender-Ansichten (360°)</a> <a href="Kueche-Wohnen-3D.html" data-project="model">3D-Konfigurator</a> <a href="Kueche-Wohnen-3D.html?modus=begehen" data-project="walk">Begehung</a> <a href="Kostenschaetzung.html" data-project="cost">Kostenschätzung</a></nav>
+<header><h1>Blender-Ansichten (360°)</h1><small id="render-state" role="status">Blender-Cycles</small></header>
 <main>
+<p class="view-help">Hier wechselst du zwischen festen Standpunkten. Frei gehen kannst du in der <a data-project="walk" href="Kueche-Wohnen-3D.html?modus=begehen">Begehung im 3D-Konfigurator</a>.</p>
 <nav aria-label="Panorama einstellen">
 <div class="group" aria-label="Raum"><button data-room="wohn">Stube</button><button data-room="essen">Essplatz</button><button data-room="kueche">Küche</button><button data-room="flur">Flur</button><button data-room="bad">Bad</button></div>
 <div class="group"><label>Blender-Variante <select id="blender-variant">
@@ -52,7 +56,7 @@ main.expanded{position:fixed;inset:0;z-index:10;width:100vw}
 <div class="group" aria-label="Decke" data-base-options><button data-finish="holz">Holzdecke</button><button data-finish="weiss">Warmweisse Decke</button></div>
 <div class="group" aria-label="Küchenboden" data-base-options><button data-floor="schiefer">Schiefer</button><button data-floor="parkett">Eichenparkett</button></div>
 <div class="group" aria-label="Badboden" data-base-options><button data-bathfloor="neu">Bad neu</button><button data-bathfloor="bestand">Bad Bestand</button></div>
-<div class="group actions"><a class="control" id="live" href="Rundgang-Live.html">Live konfigurieren</a><a class="control" href="Kueche-Wohnen-3D.html">Zum 3D-Modell</a><a class="control" id="panorama-file" hidden target="_blank" rel="noopener">4K-Panorama öffnen</a><button id="reset">Startblick</button><button id="expand" aria-pressed="false">Vollbild</button></div>
+<div class="group actions"><a class="control" id="panorama-file" hidden target="_blank" rel="noopener">4K-Panorama öffnen</a><button id="reset">Startblick</button><button id="expand" aria-pressed="false">Vollbild</button></div>
 </nav>
 <div class="stage">
 <canvas tabindex="0" aria-label="360-Grad-Ansicht. Mit Pfeiltasten drehen und mit Plus oder Minus zoomen."></canvas>
@@ -136,7 +140,7 @@ function canPreviewStock(){
  return !!gl&&finish==='holz'&&currentImages['bad-holz-parkett'];
 }
 function hasStockRender(){
- return ['parkett','bestand'].every(key=>currentImages['bad-'+finish+'-'+key]);
+ return Boolean(images['bad-'+finish+'-bestand'])&&(!canPreviewStock()||Boolean(currentImages['bad-'+finish+'-bestand']));
 }
 function select(next,material,heading){
  const moved=next!==room;
@@ -163,7 +167,7 @@ function select(next,material,heading){
  document.querySelectorAll('[data-finish]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.finish===finish));
  document.querySelectorAll('[data-floor]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.floor===floor));
  document.querySelectorAll('[data-bathfloor]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.bathfloor===bathFloor));
- document.querySelector('#live').href='Rundgang-Live.html?room='+room+(room==='bad'?'&bath='+bathFloor:'');
+ document.querySelectorAll('[data-project="walk"]').forEach(link=>{link.href='Kueche-Wohnen-3D.html?modus=begehen&raum='+room;});
  const stock=room==='bad'&&bathFloor==='bestand';
  const key=stock&&hasStockRender()?'bad-'+finish+'-bestand':room+'-'+finish+'-'+floor;
  document.querySelectorAll('[data-base-options]').forEach(group=>{group.hidden=variant!=='bisher';});
@@ -271,10 +275,6 @@ document.querySelectorAll('[data-room]').forEach(b=>b.onclick=()=>select(b.datas
 document.querySelectorAll('[data-finish]').forEach(b=>b.onclick=()=>select(room,b.dataset.finish));
 document.querySelectorAll('[data-floor]').forEach(b=>b.onclick=()=>{floor=b.dataset.floor;select(room,finish);});
 document.querySelectorAll('[data-bathfloor]').forEach(b=>b.onclick=()=>{
- if(b.dataset.bathfloor==='bestand'&&!hasStockRender()&&!canPreviewStock()){
-   location.href='Rundgang-Live.html?room=bad&bath=bestand';
-   return;
- }
  bathFloor=b.dataset.bathfloor;
  select('bad',finish);
 });

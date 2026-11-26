@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kostenschätzung · Wohnung</title>
+<link rel="stylesheet" href="Projekt-Navigation.css">
 <style>
 :root{font:16px/1.5 system-ui,sans-serif;color:#263b33;background:#f4f4ee;--line:#dce4db;--green:#38584b}
 *{box-sizing:border-box}body{max-width:1250px;margin:0 auto;padding:clamp(12px,3vw,36px)}h1,h2,h3,p{margin:0}header,nav,.actions,.summary{display:flex;gap:12px;align-items:center;flex-wrap:wrap}header{justify-content:space-between;margin-bottom:18px}nav a,button{color:inherit;background:#f0f4ed;border:1px solid #cbd8cd;border-radius:8px;padding:7px 11px;text-decoration:none;font:inherit;cursor:pointer}button.primary{background:var(--green);color:white}.panel,.category{background:white;border:1px solid var(--line);border-radius:12px;padding:clamp(12px,2vw,20px);margin:12px 0}.summary{align-items:stretch}.summary>div{flex:1 1 155px}.summary strong{display:block;font-size:clamp(17px,2.4vw,28px);font-variant-numeric:tabular-nums}.total{color:var(--green)}small,.note{color:#53665c;font-size:.86rem}.panel p,.category p{margin:7px 0}.actions{margin-top:12px}.actions label{display:flex;gap:8px;align-items:center}.category summary{cursor:pointer;display:flex;align-items:baseline;justify-content:space-between;gap:12px}.category summary::before{content:'▸';color:var(--green)}.category[open] summary::before{content:'▾'}.category h2{font-size:18px;flex:1}.category output,.amount{font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}.table-scroll{overflow:auto}.estimate{width:100%;border-collapse:collapse;min-width:840px;margin-top:8px}th,td{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left;vertical-align:top}th{font-size:.81rem;color:#53665c;white-space:nowrap}th:first-child{width:36%}td label{font-weight:620}td small{display:block}td:first-child{min-width:210px}input,select{font:inherit;color:inherit;background:#fbfcfa;border:1px solid #cad6cb;border-radius:6px;padding:6px;max-width:100%}input[type=number]{width:93px;font-variant-numeric:tabular-nums}td select{width:100%;max-width:250px}td input[type=text]{width:100%}button.remove{padding:4px 8px}a{color:#2f5d4d}#save-status{min-height:1.4em;font-size:.85rem;color:#53665c}.sources{columns:2;column-width:265px}
@@ -14,7 +15,8 @@
 <script src="Kostenschaetzung.js?v=modellflaeche-1" defer></script>
 </head>
 <body>
-<header><h1>Kostenschätzung</h1><nav aria-label="Projekt"><a href="Kueche-Wohnen-3D.html">3D-Konfigurator</a><a href="index.html">Startseite</a></nav></header>
+<nav class="project-nav" aria-label="Seitennavigation"><a href="index.html" data-project="start">Startseite</a> <a href="Wohnen-und-Bad-360.html" data-project="blender">Blender-Ansichten (360°)</a> <a href="Kueche-Wohnen-3D.html" data-project="model">3D-Konfigurator</a> <a href="Kueche-Wohnen-3D.html?modus=begehen" data-project="walk">Begehung</a> <a href="Kostenschaetzung.html" data-project="cost" aria-current="page">Kostenschätzung</a></nav>
+<header><h1>Kostenschätzung</h1></header>
 <main>
 <section class="panel" aria-label="Budgetübersicht">
 <div class="summary">
@@ -28,7 +30,7 @@
 <label>Planung (%) <input type="number" id="planning" min="0" max="100" step="0.5" value="8"></label>
 <label>Reserve (%) <input type="number" id="reserve" min="0" max="100" step="0.5" value="12"></label>
 <button type="button" id="save" class="primary">Speichern</button>
-<button type="button" id="sync">Aus 3D-Modell übernehmen</button>
+<button type="button" id="sync">Aus dem 3D-Konfigurator übernehmen</button>
 <button type="button" id="export">Kosten als CSV exportieren</button>
 </div>
 <p class="note">Ein Betrag unter «Offerte total CHF» ersetzt die berechnete Bandbreite der Position. Bei leerem Feld gelten wieder Menge und Richtpreise.</p>

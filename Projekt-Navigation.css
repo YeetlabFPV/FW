@@ -1,0 +1,5 @@
+.project-nav{display:flex;flex-wrap:wrap;gap:.3rem .55rem;align-items:center;margin:0 0 .75rem;padding:.35rem 0;border-bottom:1px solid #d8dfd6;font:600 .88rem/1.35 system-ui,sans-serif}
+.project-nav a{display:inline-flex;align-items:center;min-height:36px;padding:.28rem .6rem;border:1px solid transparent;border-radius:.45rem;color:#29483b;background:transparent;text-decoration:none;white-space:nowrap}
+.project-nav a:hover{background:#e8eee6}
+.project-nav a[aria-current=page]{background:#38584b;color:#fff}
+.project-nav a:focus-visible{outline:2px solid #38584b;outline-offset:2px}

@@ -2,7 +2,8 @@
 <html lang="de">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Umbau · Küche, Wohnen und Bad</title>
+<title>3D-Konfigurator · Wohnung</title>
+<link rel="stylesheet" href="Projekt-Navigation.css">
 <style>
 :root{font:15px/1.5 system-ui,sans-serif;color:#263830;background:#f4f4ee}
 body{margin:0;padding:clamp(12px,1.6vw,32px)}
@@ -63,13 +64,14 @@ body.walk-expanded{overflow:hidden}
 .walk-controls button:first-child{grid-column:2}.walk-controls button:nth-child(2){grid-column:1}
 .stage.walking canvas{cursor:crosshair}
 .walk-actions{position:absolute;right:12px;top:12px;left:12px;display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap;pointer-events:none}
-.walk-actions button{pointer-events:auto;background:#f8faf6ed}
+.walk-actions button,.walk-actions a.control{pointer-events:auto;background:#f8faf6ed}
 .walk-actions button[aria-pressed="true"]{background:#38584b}
 @media(max-width:780px){section:not(:fullscreen) .stage.walking:not(:fullscreen):not(.expanded) canvas{height:70dvh;min-height:0}}
 footer{padding:8px 12px;font-size:13px;color:#4a5b51}
 @media(max-width:780px){main{grid-template-columns:1fr}body{padding:12px}aside{max-height:none}}
 </style>
-<header class="page-header"><h1>Umbau · Küche, Wohnen und Bad</h1><div><a class="control" href="Wohnen-und-Bad-360.html">360°-Rundgang</a> <a class="control" id="cost-link" href="Kostenschaetzung.html">Kostenschätzung</a> <a class="control" href="index.html">Startseite</a></div></header>
+<nav class="project-nav" aria-label="Seitennavigation"><a href="index.html" data-project="start">Startseite</a> <a href="Wohnen-und-Bad-360.html" data-project="blender">Blender-Ansichten (360°)</a> <a href="Kueche-Wohnen-3D.html" data-project="model" aria-current="page">3D-Konfigurator</a> <a href="Kueche-Wohnen-3D.html?modus=begehen" data-project="walk">Begehung</a> <a href="Kostenschaetzung.html" data-project="cost" id="cost-link">Kostenschätzung</a></nav>
+<header class="page-header"><h1 id="page-heading">3D-Konfigurator</h1></header>
 <main data-mode="model">
 <section aria-label="Interaktives 3D-Modell">
 <nav class="toolbar" aria-label="3D-Modell steuern">
@@ -77,7 +79,7 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
   <button data-view="Wohnung">Wohnung</button><button data-view="Küche">Küche</button><button data-view="Wohnen">Wohnen</button><button data-view="Bad">Bad</button><button data-view="Zimmer Eingang">Zimmer Eingang</button><button data-view="Schlafzimmer 1">Schlafzimmer 1</button><button data-view="Schlafzimmer 2">Schlafzimmer 2</button>
  </div>
  <div class="toolbar-group view-toolbar" role="group" aria-label="Ansicht"><strong>Ansicht</strong>
-  <button type="button" id="walk-mode" aria-pressed="false">Wohnung begehen</button><button data-view="Draufsicht">Draufsicht</button><button id="walls" aria-pressed="true">Wände kürzen</button><button id="doors" aria-pressed="false">Türblätter</button><button id="door-frames" aria-pressed="true">Türrahmen</button><button id="windows" aria-pressed="true">Fenster</button><button type="button" id="pan-view" aria-pressed="false">Ansicht verschieben</button><button type="button" id="center-view" hidden>Zentrieren</button><button id="full">Vollbild</button><label class="render-quality">Grafik <select id="render-quality"><option value="auto">Automatisch</option><option value="high">Maximale Details</option></select></label>
+  <button type="button" id="walk-mode" aria-pressed="false">Begehung starten</button><button data-view="Draufsicht">Draufsicht</button><button id="walls" aria-pressed="true">Wände kürzen</button><button id="doors" aria-pressed="false">Türblätter</button><button id="door-frames" aria-pressed="true">Türrahmen</button><button id="windows" aria-pressed="true">Fenster</button><button type="button" id="pan-view" aria-pressed="false">Ansicht verschieben</button><button type="button" id="center-view" hidden>Zentrieren</button><button id="full">Vollbild</button><label class="render-quality">Grafik <select id="render-quality"><option value="auto">Automatisch</option><option value="high">Maximale Details</option></select></label>
  </div>
  <div class="toolbar-group" role="group" aria-label="Planung"><strong>Planung</strong>
   <button data-view="Küchenmasse">Küchenmasse</button><button id="placement" aria-pressed="false">Möbel platzieren</button>
@@ -97,7 +99,7 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
  </div>
  <small id="placement-message" role="status">Möbel auswählen und in der Draufsicht ziehen.</small>
 </div>
-<div class="stage"><canvas tabindex="0" aria-label="3D-Modell. Mit Pfeiltasten drehen, mit Plus und Minus zoomen. Mit Umschalt und Pfeiltasten die Ansicht verschieben."></canvas><svg id="dimensions" role="img" aria-label="Wandabstände in Zentimetern"></svg><div class="walk-actions" id="walk-actions" hidden><button type="button" id="mouse-look" aria-pressed="false" hidden>Maussteuerung</button><button type="button" id="walk-full" aria-pressed="false">Vollbild</button><button type="button" id="leave-walk">Rundgang verlassen</button></div><div class="walk-controls" id="walk-controls" role="group" aria-label="Gehrichtung" hidden>
+<div class="stage"><canvas tabindex="0" aria-label="3D-Modell. Mit Pfeiltasten drehen, mit Plus und Minus zoomen. Mit Umschalt und Pfeiltasten die Ansicht verschieben."></canvas><svg id="dimensions" role="img" aria-label="Wandabstände in Zentimetern"></svg><div class="walk-actions" id="walk-actions" hidden><button type="button" id="mouse-look" aria-pressed="false" hidden>Maussteuerung</button><button type="button" id="walk-full" aria-pressed="false">Vollbild</button><button type="button" id="leave-walk">Begehung beenden</button><a class="control" id="walk-home" href="index.html">Startseite</a></div><div class="walk-controls" id="walk-controls" role="group" aria-label="Gehrichtung" hidden>
 <button type="button" data-step="forward" aria-label="Vorwärts">↑</button>
 <button type="button" data-step="left" aria-label="Nach links">←</button>
 <button type="button" data-step="back" aria-label="Rückwärts">↓</button>
@@ -1801,7 +1803,17 @@ function setWalking(active){
  }
  stopWalking();
  walkButton.setAttribute('aria-pressed',active);
- walkButton.textContent=active?'Zur Modellansicht':'Wohnung begehen';
+ walkButton.textContent=active?'Begehung beenden':'Begehung starten';
+ const heading=active?'Begehung':'3D-Konfigurator';
+ document.querySelector('#page-heading').textContent=heading;
+ document.title=heading+' · Wohnung';
+ document.querySelector('[data-project="model"]').toggleAttribute('aria-current',!active);
+ document.querySelector('[data-project="walk"]').toggleAttribute('aria-current',active);
+ document.querySelector(active?'[data-project="walk"]':'[data-project="model"]').setAttribute('aria-current','page');
+ const url=new URL(location.href);
+ if(active)url.searchParams.set('modus','begehen');
+ else{url.searchParams.delete('modus');url.searchParams.delete('raum');}
+ history.replaceState(null,'',url);
  walkControls.hidden=walkActions.hidden=!active;
  updateMouseLook();
  canvas.closest('.stage').classList.toggle('walking',active);
@@ -2483,6 +2495,10 @@ for(const button of walkControls.querySelectorAll('[data-step]')){
 }
 new ResizeObserver(draw).observe(canvas);
 validateFurniturePositions();
-select('Wohnung');
+const startParams=new URLSearchParams(location.search);
+const requestedRoom={wohn:'Wohnen',essen:'Wohnen',kueche:'Küche',flur:'Wohnung',bad:'Bad'}[startParams.get('raum')];
+if(startParams.get('bath')==='bestand')materialControls.get('bath-tile').apply('bestand',false);
+select(Object.hasOwn(views,requestedRoom)?requestedRoom:'Wohnung');
+if(startParams.get('modus')==='begehen')setWalking(true);
 }
 </script>
