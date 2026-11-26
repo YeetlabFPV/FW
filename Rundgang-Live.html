@@ -85,19 +85,24 @@ for(const [type,source] of [[gl.VERTEX_SHADER,`
  uniform bool perspective;
  varying vec3 shade;
  varying vec2 floorPosition;
+ varying vec3 world;
  varying float isOak;
  void main(){
    vec3 p=point-center;
    float depth=dot(p,front);
    if(perspective)gl_Position=vec4(dot(p,right)*scale.x,dot(p,up)*scale.y,depth*1.004-.051,depth);
    else gl_Position=vec4(dot(p,right)*scale.x,dot(p,up)*scale.y,-depth*.045,1.);
-   shade=material.rgb; floorPosition=material.a>1.5&&material.a<2.5?point.xy:point.yx; isOak=material.a;
+   world=point; shade=material.rgb; floorPosition=material.a>1.5&&material.a<2.5?point.xy:point.yx; isOak=material.a;
  }`],[gl.FRAGMENT_SHADER,`
  ${derivatives?'#extension GL_OES_standard_derivatives : enable':''}
  precision highp float;
  varying vec3 shade;
  varying vec2 floorPosition;
+ varying vec3 world;
  varying float isOak;
+ uniform vec3 center;
+ uniform bool perspective,hasLandscape;
+ uniform sampler2D landscape;
  float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
  float noise(vec2 p){
    vec2 i=floor(p),f=fract(p);
@@ -106,19 +111,33 @@ for(const [type,source] of [[gl.VERTEX_SHADER,`
  }
  void main(){
    float grain=1.;
-   if(isOak>4.5){
+   if(isOak>6.5){
+     gl_FragColor=vec4(shade,.15);
+     return;
+   }
+   if(isOak>5.5&&hasLandscape){
+     vec3 ray=normalize(world-center);
+     vec2 uv=vec2(fract(.5+atan(ray.y,ray.x)/6.2831853),.5-asin(ray.z)/3.1415927);
+     gl_FragColor=vec4(texture2D(landscape,uv).rgb*.94+vec3(.035),1.);
+     return;
+   }
+   if(isOak>4.5&&isOak<5.5){
      vec2 p=floorPosition;
-     float seam=smoothstep(.455,.495,abs(fract(p.x/.135)-.5));
+     float seam=smoothstep(.458,.499,abs(fract(p.x/.135)-.5));
+     vec2 position=p*vec2(7.4,2.);
+     vec2 cell=floor(position);
+     vec2 delta=fract(position)-vec2(.2+.6*hash(cell+27.),.2+.6*hash(cell-4.));
+     float knot=step(.69,hash(cell+5.))*exp(-dot(delta*vec2(6.,9.),delta*vec2(6.,9.)));
      float band=.06*(hash(vec2(floor(p.x/.135),8.))-.5);
-     grain=1.+band+.06*(noise(p*vec2(170.,4.))-.5)-.31*seam;
-   }else if(isOak>3.5){
+     grain=1.+band+.06*(noise(p*vec2(170.,4.))-.5)-.18*seam-.25*knot;
+   }else if(isOak>3.5&&isOak<4.5){
      vec2 p=floorPosition*vec2(95.,95.);
-     grain=1.+.035*sin(p.x*.16+sin(p.y*.22))+.025*sin(p.y*.31+p.x*.11)+.018*(hash(floor(p))-0.5);
-   }else if(isOak>2.5){
+     grain=1.+.026*(noise(p*.26)-.5)+.012*(hash(floor(p))-.5);
+   }else if(isOak>2.5&&isOak<3.5){
      vec2 p=floorPosition*vec2(102.,125.);
      float cloud=sin(p.x*.20+2.*sin(p.y*.17))*sin(p.y*.29+2.*sin(p.x*.18));
      grain=1.+cloud*.15+sin(p.y*.72+sin(p.x*.33)*2.3)*.048;
-   }else if(isOak>.5){
+   }else if(isOak>.5&&isOak<2.5){
      vec2 p=floorPosition;
      vec2 cell=floor(p*vec2(5.26,1.65));
      vec2 delta=fract(p*vec2(5.26,1.65))-vec2(.20+.60*hash(cell),.25+.50*hash(cell+17.));
@@ -131,6 +150,12 @@ for(const [type,source] of [[gl.VERTEX_SHADER,`
      float visibility=1.-smoothstep(.0015,.006,${derivatives?'fwidth(p.x)':'0.0015'});
      grain=1.+.10*(noise(p*vec2(35.,2.))-.5)+visibility*(rings*.05+(pores-.5)*.035)
          -knot*(.40*exp(-radius*radius*52.)+.12*bend);
+   }
+   if(perspective){
+     float low=1.-smoothstep(0.,.27,world.z);
+     float high=smoothstep(2.18,2.40,world.z);
+     float bounce=exp(-length((world.xy-vec2(8.3,3.1))*vec2(.6,.46)))*.10;
+     grain*=1.+bounce-.055*low-.046*high;
    }
    gl_FragColor=vec4(shade*grain,1.);
  }
@@ -153,7 +178,22 @@ for(const [i,name] of ['point','material'].entries()){
  gl.enableVertexAttribArray(slot);
  gl.vertexAttribPointer(slot,i===0?3:4,gl.FLOAT,false,28,12*i);
 }
-const uniforms=Object.fromEntries(['center','right','up','front','scale','perspective'].map(name=>[name,gl.getUniformLocation(program,name)]));
+const uniforms=Object.fromEntries(['center','right','up','front','scale','perspective','landscape','hasLandscape'].map(name=>[name,gl.getUniformLocation(program,name)]));
+if(walking){
+ const picture=new Image();
+ picture.onload=()=>{
+   const texture=gl.createTexture();
+   gl.bindTexture(gl.TEXTURE_2D,texture);
+   gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,picture);
+   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+   gl.uniform1i(uniforms.landscape,0);
+   gl.uniform1i(uniforms.hasLandscape,1);
+   draw();
+ };
+ picture.src='Alpen-Ausblick.jpg';
+}
 const views={
  Wohnung:[4.3,4.55,0,1.08,.60,13.2,0,9],
  Küche:[6.65,3.02,.35,1.08,-.65,4.8,1.73,5.55],
@@ -172,11 +212,11 @@ const routes={
  flur:[['wohn',4.86,4.24,.78],['bad',5.43,.60,.91]],
  bad:[['flur',5.35,.62,.81]]
 };
-let paths=[];
+let paths=[],glassCount=0;
 let ceiling='holz',walkRoom,fieldOfView=1.93;
 let selected='Wohnung', cut=true,floor='slate',longParquet=false,bathTile=false,showDoors=false,count=0, elevation,angle,span,center,near,far;
 function build(){
- const data=[];
+ const data=[],glass=[];
  const ceilingBox={name:'Decke',material:'Holz',wall:false,x:.19,y:.19,z:2.39,w:8.22,d:8.62,h:.075};
  for(const b of walking?[...model,ceilingBox]:model){
    if(floor!=='slate'&&b.name.startsWith('Schiefer'))continue;
@@ -191,11 +231,13 @@ function build(){
    if(h<=0)continue;
    const vertices=corners({...b,y:lo,d:hi-lo,h});
    if(b.material==='Glas' && b.name.endsWith('_Glas') && cut)continue;
+   const isGlass=walking&&b.name==='Duschglas';
+   const isWindow=walking&&b.material==='Glas'&&b.name.endsWith('_Glas');
    const color=rgb(b===ceilingBox?(ceiling==='holz'?'#c3a47e':'#eeeae2'):materials[b.material]);
    faces.forEach((face,i)=>{
      const shade=[.75,1,.78,.87,.93,.82][i]*(b.name.endsWith('_Griffmulde')?.60:1);
      for(const index of [0,1,2,0,2,3]){
-       data.push(...vertices[face[index]],...color.map(c=>c*shade),(i===0&&b===ceilingBox&&ceiling==='holz')?5:i===1?(b.name==='Parkett_Laengs'?2:b.name==='Eichenparkett_Diele'?1:b.name==='Bad_Bestandsfliese'?3:b.name==='Linoleum_Kuechenboden'?4:0):0);
+       (isGlass?glass:data).push(...vertices[face[index]],...color.map(c=>c*shade),(i===0&&b===ceilingBox&&ceiling==='holz')?5:isGlass?7:isWindow?6:i===1?(b.name==='Parkett_Laengs'?2:b.name==='Eichenparkett_Diele'?1:b.name==='Bad_Bestandsfliese'?3:b.name==='Linoleum_Kuechenboden'?4:0):0);
      }
    });
  }
@@ -223,7 +265,8 @@ function build(){
    swing(6.10,2.47,.60,Math.PI,70*Math.PI/180);
  }
  count=data.length/7;
- gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data),gl.STATIC_DRAW);
+ glassCount=glass.length/7;
+ gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data.concat(glass)),gl.STATIC_DRAW);
 }
 const dimensions=document.querySelector('#dimensions');
 const fullscreenButton=document.querySelector('#full');
@@ -271,6 +314,14 @@ function draw(){
    gl.uniform3fv(uniforms.front,[c*e,s*e,v]);
    gl.uniform2f(uniforms.scale,1/limit,width/(height*limit));
    gl.drawArrays(gl.TRIANGLES,0,count);
+   if(glassCount){
+     gl.enable(gl.BLEND);
+     gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+     gl.depthMask(false);
+     gl.drawArrays(gl.TRIANGLES,count,glassCount);
+     gl.depthMask(true);
+     gl.disable(gl.BLEND);
+   }
    for(const {marker,target:[x,y,z]} of paths){
      const dx=x-center[0],dy=y-center[1],dz=z-center[2];
      const depth=dx*c*e+dy*s*e+dz*v;
