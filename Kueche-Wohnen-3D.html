@@ -102,7 +102,10 @@ for(const [type,source] of [[gl.VERTEX_SHADER,`
  float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
  void main(){
    float grain=1.;
-   if(isOak>2.5){
+   if(isOak>3.5){
+     vec2 p=floorPosition*vec2(95.,95.);
+     grain=1.+.035*sin(p.x*.16+sin(p.y*.22))+.025*sin(p.y*.31+p.x*.11)+.018*(hash(floor(p))-0.5);
+   }else if(isOak>2.5){
      vec2 p=floorPosition*vec2(102.,125.);
      float cloud=sin(p.x*.20+2.*sin(p.y*.17))*sin(p.y*.29+2.*sin(p.x*.18));
      grain=1.+cloud*.15+sin(p.y*.72+sin(p.x*.33)*2.3)*.048;
@@ -166,7 +169,7 @@ function build(){
    faces.forEach((face,i)=>{
      const shade=[.75,1,.78,.87,.93,.82][i]*(b.name.endsWith('_Griffmulde')?.60:1);
      for(const index of [0,1,2,0,2,3]){
-       data.push(...vertices[face[index]],...color.map(c=>c*shade),i===1?(b.name==='Parkett_Laengs'?2:b.name==='Eichenparkett_Diele'?1:b.name==='Bad_Bestandsfliese'?3:0):0);
+       data.push(...vertices[face[index]],...color.map(c=>c*shade),i===1?(b.name==='Parkett_Laengs'?2:b.name==='Eichenparkett_Diele'?1:b.name==='Bad_Bestandsfliese'?3:b.name==='Linoleum_Kuechenboden'?4:0):0);
      }
    });
  }
