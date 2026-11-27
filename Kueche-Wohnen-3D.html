@@ -1094,7 +1094,7 @@ function kitchenWallLayout(wallHob, ovenInWall){
    :ovenInWall?[[.55,'dishwasher'],[.55,'oven'],[.55,'drawers'],[.55,'drawers']]
    :[[.55,'dishwasher'],[.55,'drawers'],[.55,'drawers'],[.55,'drawers']];
  return {start,modules,ovenCenter:start+.55+.55/2,
-   uppers:[6.16,6.71,7.26].map((x,index)=>({x,width:.55,units:wallHob&&index===1?4:5}))};
+   uppers:[[6.05,.66],[6.71,.55],[7.26,.55]].map(([x,width],index)=>({x,width,units:wallHob&&index===1?4:5}))};
 }
 function smsCeramicBox(original,center,z){
  return {...original,x:center-.278,y:z===.885?1.807:3.616,w:.556,d:.516,z,h:.005};
@@ -2044,10 +2044,6 @@ function build(){
    }
    if(b.name.startsWith('Oberschrank_')){
      if(b.name==='Oberschrank_1'){
-       const fridge=model.find(piece=>piece.name==='Kuehlschrank_Vollgroesse');
-       const fillerX=fridge.x+fridge.w;
-       addObject({...b,name:'Oberschrank_Passleiste_am_Hochschrank',x:fillerX,
-         w:uppers[0].x-fillerX,y:2.09,d:.016,z:2.04-uppers[0].units*SMS_UNIT,h:uppers[0].units*SMS_UNIT},undefined);
        for(const {x,width,units} of uppers){
          const h=units*SMS_UNIT,z=2.04-h;
          addObject({...b,x:x+.003,w:width-.006,z,h},undefined);
