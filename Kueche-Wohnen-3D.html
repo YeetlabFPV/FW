@@ -2201,11 +2201,11 @@ const walkControls=document.querySelector('#walk-controls');
 const leaveWalkButton=document.querySelector('#leave-walk');
 const walkActions=document.querySelector('#walk-actions');
 const mouseLookButton=document.querySelector('#mouse-look');
-const coarsePointer=matchMedia('(pointer: coarse)');
+const desktopPointer=matchMedia('(hover: hover) and (pointer: fine)');
 const mouseLocked=()=>document.pointerLockElement===canvas;
 let freeLook=false,hadMouseLock=false;
 function updateMouseLook(){
- mouseLookButton.hidden=coarsePointer.matches;
+ mouseLookButton.hidden=!desktopPointer.matches;
  mouseLookButton.setAttribute('aria-pressed',freeLook);
  mouseLookButton.textContent=freeLook?'Maus freigeben':'Maussteuerung';
  if(walking){
@@ -2220,13 +2220,16 @@ function releaseMouseLook(){
  if(mouseLocked())document.exitPointerLock();
  updateMouseLook();
 }
-mouseLookButton.onclick=async()=>{
- if(freeLook){releaseMouseLook();return;}
+async function enableMouseLook(lock=false){
+ if(!walking||!desktopPointer.matches)return;
  freeLook=true;
  canvas.focus({preventScroll:true});
  updateMouseLook();
- try{await canvas.requestPointerLock?.();}catch{updateMouseLook();}
-};
+ if(lock&&!mouseLocked()){
+   try{await canvas.requestPointerLock?.();}catch{updateMouseLook();}
+ }
+}
+mouseLookButton.onclick=()=>freeLook?releaseMouseLook():enableMouseLook(true);
 document.addEventListener('pointerlockchange',()=>{
  const locked=mouseLocked();
  if(locked&&(!walking||!freeLook)){document.exitPointerLock();return;}
@@ -2240,7 +2243,11 @@ document.addEventListener('mousemove',event=>{
  if(!walking||!freeLook||(!mouseLocked()&&event.target!==canvas))return;
  turnWalk(event.movementX,event.movementY,true);
 });
-coarsePointer.addEventListener('change',updateMouseLook);
+desktopPointer.addEventListener('change',()=>{
+ if(!desktopPointer.matches)releaseMouseLook();
+ else if(walking)enableMouseLook();
+ else updateMouseLook();
+});
 const canvasHelp=canvas.getAttribute('aria-label');
 let returnView='Wohnung';
 function selectWalk(name){
@@ -2250,7 +2257,7 @@ function selectWalk(name){
  for(const button of buttons)button.setAttribute('aria-pressed',button.dataset.view===name);
  build();draw();
 }
-function setWalking(active){
+function setWalking(active,lockMouse=false){
  if(active){
    if(Object.hasOwn(walkStarts,selected))returnView=selected;
    if(placingFurniture)setPlacementMode(false);
@@ -2294,12 +2301,13 @@ function setWalking(active){
    selectWalk(returnView);
    canvas.scrollIntoView({block:'start'});
    canvas.focus({preventScroll:true});
+   if(desktopPointer.matches)enableMouseLook(lockMouse);
  }else{
    select(returnView);
    walkButton.focus();
  }
 }
-walkButton.onclick=()=>setWalking(!walking);
+walkButton.onclick=()=>setWalking(!walking,true);
 leaveWalkButton.onclick=()=>setWalking(false);
 buttons.forEach(button=>button.addEventListener('click',()=>{
  const name=button.dataset.view;
@@ -3278,7 +3286,11 @@ function turnWalk(dx,dy,locked=false){
  draw();
 }
 canvas.addEventListener('pointerdown',e=>{
- if(!e.isPrimary||e.button!==0||freeLook)return;
+ if(!e.isPrimary||e.button!==0)return;
+ if(freeLook){
+   if(e.pointerType==='mouse')enableMouseLook(true);
+   return;
+ }
  const panning=!walking&&(panMode||e.shiftKey);
  if(placingFurniture&&!panning){
    const point=furniturePoint(e),id=pickFurniture(...point);
