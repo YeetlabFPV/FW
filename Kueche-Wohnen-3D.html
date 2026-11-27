@@ -168,9 +168,14 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
 <form class="preset-controls" id="preset-form">
 <label class="choice">Name des Designs<input id="preset-name" maxlength="80" aria-describedby="preset-suggestion"></label>
 <p class="preset-suggestion" id="preset-suggestion"></p>
-<button type="submit">Design speichern</button>
 <div class="preset-actions"><button type="button" id="preset-import">Design importieren</button></div><details><summary>Datei und Standardanordnung</summary><div class="preset-actions"><button type="button" id="preset-export">Design als Datei herunterladen</button><button type="button" id="preset-default">Standardanordnung laden</button><input type="file" id="preset-file" accept=".json,application/json" hidden></div></details>
-<fieldset id="design-identity" hidden style="margin:0;border:1px solid #c4cfc4;border-radius:8px"><legend>Beim ersten Speichern</legend><label class="choice">Dein Name<input id="design-author" maxlength="100" autocomplete="name"></label><label class="choice">Speicher-PIN<input id="design-pin" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}"></label></fieldset><p id="preset-status" role="status"></p>
+<fieldset id="design-identity" hidden style="margin:0;border:1px solid #c4cfc4;border-radius:8px"><legend>Beim ersten Speichern</legend><label class="choice">Dein Name<input id="design-author" maxlength="100" autocomplete="name"></label><label class="choice">Speicher-PIN<input id="design-pin" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}"></label></fieldset>
+<p id="design-save-target" class="preset-suggestion" hidden></p>
+<div class="preset-actions">
+ <button type="submit" id="save-design">Design speichern</button>
+ <button type="submit" id="save-design-copy" hidden>Als neues Design speichern</button>
+</div>
+<p id="preset-status" role="status"></p>
 </form>
 <details class="saved-designs" id="saved-designs">
  <summary>Gespeicherte Designs</summary>
@@ -2656,6 +2661,16 @@ document.querySelector('#cost-link').addEventListener('click',()=>{
  try{sessionStorage.setItem('fw-kosten-konfiguration',JSON.stringify(configuration(suggestedPresetName())));}catch{}
 });
 let designClient, sharedDesigns=[], designUser, designAdmin=false;
+let editingDesign=null;
+const saveDesign=document.querySelector('#save-design');
+const saveCopy=document.querySelector('#save-design-copy');
+const saveTarget=document.querySelector('#design-save-target');
+function setEditingDesign(record){
+ editingDesign=record?.editable?record:null;
+ saveCopy.hidden=!editingDesign;
+ saveTarget.hidden=!editingDesign;
+ saveTarget.textContent=editingDesign?'Aktuelles Design: '+editingDesign.title:'';
+}
 const identity=document.querySelector('#design-identity');
 const authorInput=document.querySelector('#design-author');
 const pinInput=document.querySelector('#design-pin');
@@ -2741,11 +2756,11 @@ async function loadSavedDesign(record){
  }
  if(!preset?.selections)throw new Error('Dieses Design ist unvollständig.');
  applyConfiguration(preset);
+ setEditingDesign(record);
+ presetStatus.textContent='';
  manageStatus.textContent='Design geladen.';
 }
-async function manageDesign(record,operation){
- const overwrite=operation==='overwrite';
- if(!confirm(overwrite?'«'+record.title+'» mit dem aktuellen Design überschreiben?':'«'+record.title+'» löschen?'))return;
+async function changeSavedDesign(record,overwrite){
  if(record.preset){
    const next=new Map(presets);
    if(overwrite)next.set(record.title,designPayload(record.title));
@@ -2758,11 +2773,18 @@ async function manageDesign(record,operation){
    const entries=client.from('fw_entries');
    const change=overwrite?entries.update({payload:designPayload(record.title)}):entries.delete();
    const {data,error}=await change.eq('id',record.id).eq('kind','design').select('id').maybeSingle();
-   if(error||!data)throw new Error('Die Änderung konnte nicht gespeichert werden. Prüfe deine Berechtigung.');
-   try{await refreshDesigns();}catch{
-     manageStatus.textContent='Änderung gespeichert. Die Liste wird beim nächsten Öffnen aktualisiert.';
-     return;
-   }
+   if(error||!data)throw new Error('Das Design konnte nicht geändert werden. Prüfe deine Berechtigung.');
+   await refreshDesigns().catch(()=>{});
+ }
+ if(!overwrite&&editingDesign&&record.id===editingDesign.id&&record.title===editingDesign.title)setEditingDesign(null);
+}
+async function manageDesign(record,operation){
+ const overwrite=operation==='overwrite';
+ if(!confirm(overwrite?'«'+record.title+'» mit dem aktuellen Design überschreiben?':'«'+record.title+'» löschen?'))return;
+ await changeSavedDesign(record,overwrite);
+ if(overwrite){
+   setEditingDesign(record);
+   presetName.value=record.title;
  }
  manageStatus.textContent=overwrite?'Design überschrieben.':'Design gelöscht.';
 }
@@ -2796,9 +2818,17 @@ document.querySelector('#saved-designs').addEventListener('toggle',event=>{
 });
 presetForm.addEventListener('submit',async event=>{
  event.preventDefault();
- const button=presetForm.querySelector('[type=submit]');
- button.disabled=true;
+ if(saveDesign.disabled)return;
+ const target=editingDesign;
+ const asCopy=event.submitter===saveCopy;
+ saveDesign.disabled=saveCopy.disabled=true;
  try{
+   if(target&&!asCopy){
+     await changeSavedDesign(target,true);
+     presetName.value=target.title;
+     presetStatus.textContent='Änderungen an «'+target.title+'» gespeichert.';
+     return;
+   }
    const client=await connectDesigns();
    let {data:{session}}=await client.auth.getSession();
    let allowed=false;
@@ -2824,19 +2854,27 @@ presetForm.addEventListener('submit',async event=>{
      if(result.data!==true)throw new Error('Der PIN stimmt nicht oder es gab zu viele Versuche.');
    }
    pinInput.value='';
-   const name=presetName.value.trim()||suggestedPresetName();
+   let name=presetName.value.trim()||suggestedPresetName();
+   if(asCopy&&name===target?.title){
+     const base=name.slice(0,70)+' (Kopie';
+     const used=new Set([...presets.keys(),...sharedDesigns.map(record=>record.title)]);
+     name=base+')';
+     for(let n=2;used.has(name);n++)name=base+' '+n+')';
+   }
    const {data,error}=await client.from('fw_entries').insert({kind:'design',title:name,author,payload:designPayload(name)}).select('id').single();
    if(error)throw new Error('Das Design konnte nicht gespeichert werden. Versuch es erneut.');
    try{localStorage.setItem('fw-team-author',author);}catch{}
    identity.hidden=true;
    presetName.value=name;
-   presetStatus.textContent='Design gespeichert.';
+   setEditingDesign({id:data.id,title:name,editable:true});
+   presetStatus.textContent=asCopy?'Neues Design gespeichert.':'Design gespeichert.';
    document.querySelector('#saved-designs').open=true;
    await refreshDesigns().catch(()=>{});
  }catch(error){presetStatus.textContent=error.message;}
- finally{button.disabled=false;}
+ finally{saveDesign.disabled=saveCopy.disabled=false;}
 });
 function applyConfiguration(preset){
+ setEditingDesign(null);
  for(const [id,control] of materialControls){
    const value=preset.selections[id]?.value;
    if(value!==undefined)control.apply(value,false);
