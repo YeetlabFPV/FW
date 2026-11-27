@@ -3347,6 +3347,7 @@ function zoom(factor){
 }
 canvas.addEventListener('wheel',e=>{e.preventDefault();zoom(Math.exp(Math.sign(e.deltaY)*.12));},{passive:false});
 canvas.addEventListener('keydown',e=>{
+ if(walking&&e.key.startsWith('Arrow'))return;
  if(!walking&&e.shiftKey&&e.key.startsWith('Arrow')){
    const step=32;
    const dx=e.key==='ArrowLeft'?-step:e.key==='ArrowRight'?step:0;
@@ -3360,15 +3361,16 @@ canvas.addEventListener('keydown',e=>{
  switch(e.key){
  case '+':zoom(.88);break;
  case '-':zoom(1.14);break;
- case 'ArrowLeft':angle+=walking?-.15:.15;break;
- case 'ArrowRight':angle+=walking?.15:-.15;break;
+ case 'ArrowLeft':angle+=.15;break;
+ case 'ArrowRight':angle-=.15;break;
  case 'ArrowUp':elevation=Math.min(Math.PI/2,elevation+.12);break;
- case 'ArrowDown':elevation=Math.max(walking?-1.55:.12,elevation-.12);break;
+ case 'ArrowDown':elevation=Math.max(.12,elevation-.12);break;
  default:return;
  }
  e.preventDefault();draw();
 });
-const movementKeys={w:'forward',a:'left',s:'back',d:'right'};
+const movementKeys={w:'forward',a:'left',s:'back',d:'right',
+ arrowleft:'lookLeft',arrowright:'lookRight',arrowup:'lookUp',arrowdown:'lookDown'};
 const heldSteps=new Map();
 let walkFrame=0,walkTime=0;
 const playerRadius=.15;
@@ -3385,9 +3387,15 @@ function canWalk(x,y){
  });
 }
 function walkTick(time){
- const step=1.45*Math.min(.032,walkTime?(time-walkTime)/1000:0);
+ const elapsed=Math.min(.032,walkTime?(time-walkTime)/1000:1/60);
+ const step=1.45*elapsed;
  walkTime=time;
  const directions=new Set(heldSteps.values());
+ const turn=Number(directions.has('lookRight'))-Number(directions.has('lookLeft'));
+ const tilt=Number(directions.has('lookUp'))-Number(directions.has('lookDown'));
+ const oldElevation=elevation;
+ angle+=turn*1.65*elapsed;
+ elevation=Math.max(-1.42,Math.min(1.42,elevation+tilt*1.35*elapsed));
  const forward=Number(directions.has('forward'))-Number(directions.has('back'));
  const strafe=Number(directions.has('right'))-Number(directions.has('left'));
  const scale=step/Math.max(1,Math.hypot(forward,strafe));
@@ -3396,7 +3404,7 @@ function walkTick(time){
  const [x,y]=center;
  if(canWalk(x+dx,y))center[0]+=dx;
  if(canWalk(center[0],y+dy))center[1]+=dy;
- if(x!==center[0]||y!==center[1])draw();
+ if(turn||elevation!==oldElevation||x!==center[0]||y!==center[1])draw();
  walkFrame=requestAnimationFrame(walkTick);
 }
 function holdStep(key,direction){
