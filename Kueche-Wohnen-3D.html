@@ -75,8 +75,7 @@ canvas.placing,canvas.panning{cursor:move}
 .design-library-header h2{font-size:clamp(17px,4vw,23px);margin:0}
 .design-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px;margin:8px 0 16px}
 .design-card{min-width:0;padding:10px;background:#f8faf6;border:1px solid #d6ded5;border-radius:8px}
-.design-card img,.design-placeholder{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:5px;background:#e9eee8}
-.design-placeholder{display:grid;place-items:center;color:#456052;font-size:13px}
+.design-palette{display:grid;grid-template-columns:repeat(4,1fr);aspect-ratio:16/9;overflow:hidden;border-radius:5px;background:#e9eee8}
 .design-card p{margin:6px 0;font-weight:650;overflow-wrap:anywhere}
 .design-card button{margin:0 4px 4px 0;font-size:13px;min-height:34px}
 .design-card button[data-danger]{color:#80362a;background:transparent}
@@ -2778,43 +2777,19 @@ const authorInput=document.querySelector('#design-author');
 const pinInput=document.querySelector('#design-pin');
 try{authorInput.value=localStorage.getItem('fw-team-author')||'';}catch{}
 
-function designPayload(name){
- const payload=configuration(name);
- try{
-   draw();
-   const preview=document.createElement('canvas');
-   preview.width=480;
-   preview.height=270;
-   const scale=Math.max(preview.width/canvas.width,preview.height/canvas.height);
-   const w=canvas.width*scale,h=canvas.height*scale;
-   preview.getContext('2d').drawImage(canvas,(preview.width-w)/2,(preview.height-h)/2,w,h);
-   const thumbnail=preview.toDataURL('image/jpeg',.68);
-   if(thumbnail.length<60000)payload.thumbnail=thumbnail;
- }catch{}
- return payload;
-}
-const referenceDesigns=[
- {title:'Wie Pascal Haus',source:'Umbau Birmensdorferstrasse · baubüro in situ',colors:['#82a9a6','#c5c6c0','#a16e56','#9bb7b9'],values:{
-   kitchen:'#82a9a6',worktop:'white',floor:'terracotta',ceiling:'concrete',roomFloor:'wood',
-   sideWallFinish:'paint',bathWalls:'#f2efe8',showerFinish:'iceCube','bath-tile':'charcoalCube',
-   bath:'#ded1bb',bathHandle:'#d8b58d',kitchenHandle:'#d8b58d',builtins:'#c4c4bd',
-   builtinsHandle:'wood',diningStyle:'oak',chairStyle:'openOak',sofa:'#9baeba',sideboard:'#ded8c9',
-   cookingSetup:'ceramicWall'
- }},
- {title:'Mirlo Urbano',source:'Reihenhaus Schaffhauserstrasse · Mirlo Urbano',colors:['#dfded4','#26272a','#a66f5c','#263b55'],values:{
-   kitchen:'#dfded4',worktop:'marquina',floor:'cementRust',ceiling:'clay',wallPaint:'#ded8c9',roomFloor:'cementLino',
-   kitchenHandle:'#d8b58d',builtins:'#dfded4',builtinsHandle:'wood',bath:'#263b55',
-   bathHandle:'#d8b58d',showerFinish:'marquina',sideWallFinish:'marquina','bath-tile':'marquina',
-   diningStyle:'oak',chairStyle:'openOak',sideboard:'#ded8c9',sofa:'#747b64',cookingSetup:'ceramicWall'
- }}
-];
-function referencePreset(reference){
- const selections=Object.fromEntries([...materialControls].map(([id,{select,label}])=>{
-   const value=reference.values[id]??defaultConfiguration.selections[id]??select.options[0].value;
-   const option=[...select.options].find(item=>item.value===value);
-   return [id,{value:option?.value??select.options[0].value,option:option?.textContent??select.options[0].textContent,label}];
- }));
- return {...defaultConfiguration,format:'fw-3d-materials',version:1,name:reference.title,selections};
+function designPalette(selections){
+ const value=id=>selections?.[id]?.value;
+ const hex=(color,fallback)=>typeof color==='string'&&/^#[0-9a-f]{6}$/i.test(color)?color:fallback;
+ const sample=(id,key,fallback)=>hex(materialSamples[id]?.[key]?.[0],fallback);
+ const worktop=value('worktop');
+ const floor=value('floor');
+ const shower=value('showerFinish');
+ return [
+   ['Küchenfronten',hex(value('kitchen'),'#939e95')],
+   ['Arbeitsplatte',worktop==='quartz'?sample('quartzFinish',value('quartzFinish'),'#d8cabc'):sample('worktop',worktop,'#74736c')],
+   ['Küchenboden',floor==='linoleum'?hex(value('linoleum'),'#b7b5a9'):sample('floor',floor,'#55565a')],
+   ['Duschrückwand',!shower||['paint','coated'].includes(shower)?hex(value('bathWall'),'#a8bbc4'):sample('showerFinish',shower,'#a8bbc4')]
+ ];
 }
 function renderDesignCards(){
  designCards.replaceChildren();
@@ -2823,8 +2798,7 @@ function renderDesignCards(){
    if(!groups.has(group))groups.set(group,[]);
    groups.get(group).push(record);
  }
- for(const reference of referenceDesigns)add('Referenzdesigns',{...reference,preset:referencePreset(reference)});
- for(const [title,preset] of presets)add('Meine Designs',{title,preset,preview:preset.thumbnail,editable:true});
+ for(const [title,preset] of presets)add('Meine Designs',{title,preset,selections:preset.selections,editable:true});
  for(const record of sharedDesigns){
    const own=record.owner_id===designUser?.id;
    add(own?'Meine Designs':'Designs von '+record.author,{...record,editable:own,deletable:own||designAdmin});
@@ -2839,31 +2813,21 @@ function renderDesignCards(){
    for(const record of records){
      const card=document.createElement('article');
      card.className='design-card';
-     const hasPreview=typeof record.preview==='string'&&record.preview.length<60000&&/^data:image\/jpeg;base64,[A-Za-z0-9+/]+=*$/.test(record.preview);
-     const picture=document.createElement(hasPreview?'img':'div');
-     if(hasPreview){
-       picture.src=record.preview;
-       picture.alt='';
-       picture.loading='lazy';
-     }else{
-       picture.className='design-placeholder';
-       if(record.colors){
-         picture.style.gridTemplateColumns='repeat(4,1fr)';
-         picture.style.gap='0';
-         picture.style.overflow='hidden';
-         picture.setAttribute('aria-label','Farbpalette');
-         for(const color of record.colors){
-           const chip=document.createElement('span');
-           chip.style.cssText='width:100%;height:100%;background:'+color;
-           picture.append(chip);
-         }
-       }else picture.textContent='Keine Vorschau';
+     const picture=document.createElement('div');
+     picture.className='design-palette';
+     picture.setAttribute('role','img');
+     const palette=designPalette(record.selections??record.preset?.selections);
+     picture.setAttribute('aria-label','Farbpalette: '+palette.map(([label,color])=>label+' '+color).join(', '));
+     for(const [label,color] of palette){
+       const swatch=document.createElement('span');
+       swatch.style.backgroundColor=color;
+       swatch.title=label+' · '+color;
+       picture.append(swatch);
      }
      const title=document.createElement('p');
      title.textContent=record.title;
      const content=document.createElement('div');
      content.append(title);
-     if(record.source){const source=document.createElement('small');source.textContent=record.source;content.append(source);}
      card.append(picture,content);
      function action(label,run){
        const button=document.createElement('button');
@@ -2964,7 +2928,7 @@ function showRenameForm(content,record){
 async function changeSavedDesign(record,overwrite){
  if(record.preset){
    const next=new Map(presets);
-   if(overwrite)next.set(record.title,designPayload(record.title));
+   if(overwrite)next.set(record.title,configuration(record.title));
    else next.delete(record.title);
    localStorage.setItem(presetKey,JSON.stringify([...next]));
    presets=next;
@@ -2972,7 +2936,7 @@ async function changeSavedDesign(record,overwrite){
  }else{
    const client=await connectDesigns();
    const entries=client.from('fw_entries');
-   const change=overwrite?entries.update({payload:designPayload(record.title)}):entries.delete();
+   const change=overwrite?entries.update({payload:configuration(record.title)}):entries.delete();
    const {data,error}=await change.eq('id',record.id).eq('kind','design').select('id').maybeSingle();
    if(error||!data)throw new Error('Das Design konnte nicht geändert werden. Prüfe deine Berechtigung.');
    await refreshDesigns().catch(()=>{});
@@ -2998,7 +2962,7 @@ async function refreshDesigns(){
  designAdmin=Boolean(designUser&&!designUser.is_anonymous&&(await client.rpc('fw_is_admin')).data===true);
  const items=[];
  for(let offset=0;;offset+=250){
-   const {data,error}=await client.from('fw_entries').select('id,title,author,owner_id,preview:payload->>thumbnail').eq('kind','design')
+   const {data,error}=await client.from('fw_entries').select('id,title,author,owner_id,selections:payload->selections').eq('kind','design')
      .order('created_at',{ascending:false}).order('id').range(offset,offset+249);
    if(error)throw new Error('Gespeicherte Designs konnten nicht geladen werden.');
    items.push(...data);
@@ -3073,7 +3037,7 @@ presetForm.addEventListener('submit',async event=>{
      if(result.data!==true)throw new Error('Der PIN stimmt nicht oder es gab zu viele Versuche.');
    }
    pinInput.value='';
-   const {data,error}=await client.from('fw_entries').insert({kind:'design',title:name,author,payload:designPayload(name)}).select('id').single();
+   const {data,error}=await client.from('fw_entries').insert({kind:'design',title:name,author,payload:configuration(name)}).select('id').single();
    if(error)throw new Error('Das Design konnte nicht gespeichert werden. Versuch es erneut.');
    try{localStorage.setItem('fw-team-author',author);}catch{}
    closeNewDesign();
