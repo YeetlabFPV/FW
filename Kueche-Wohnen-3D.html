@@ -184,11 +184,11 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
 <h2 id="save-load-title">Speichern &amp; Laden</h2>
 <form class="preset-controls" id="preset-form">
 <label class="choice" id="design-name-field" hidden>Name des Designs<input id="preset-name" maxlength="80"></label>
-<fieldset id="design-identity" hidden style="margin:0;border:1px solid #c4cfc4;border-radius:8px"><legend>Beim ersten Speichern</legend><label class="choice">Dein Name<input id="design-author" maxlength="100" autocomplete="name"></label><label class="choice">Speicher-PIN<input id="design-pin" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}"></label></fieldset>
 <p id="design-save-target" class="preset-suggestion" hidden></p>
 <div class="preset-actions">
  <button type="submit" id="save-design">Design speichern</button>
  <button type="submit" id="save-design-copy" hidden>Als neues Design speichern</button>
+ <button type="button" id="design-save-login" hidden aria-haspopup="dialog">Anmelden</button>
  <button type="button" id="cancel-new-design" hidden>Abbrechen</button>
 </div>
 <p id="preset-status" role="status"></p>
@@ -226,8 +226,24 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
   <h2 id="design-library-title">Gespeicherte Designs</h2>
   <form method="dialog"><button type="submit" autofocus>Schliessen</button></form>
  </div>
+ <div class="preset-actions">
+  <button type="button" id="design-library-login" hidden aria-haspopup="dialog">Anmelden</button>
+  <span id="design-library-identity"></span>
+ </div>
  <p id="design-manage-status" role="status"></p>
  <div id="design-cards"></div>
+</dialog>
+<dialog id="design-login" aria-labelledby="design-login-title">
+ <h2 id="design-login-title">Anmelden</h2>
+ <form class="preset-controls" id="design-login-form">
+  <label class="choice">Dein Name<input name="author" maxlength="100" autocomplete="name" required></label>
+  <label class="choice">Speicher-PIN<input name="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="4" pattern="[0-9]{4}" required></label>
+  <div class="preset-actions">
+   <button type="submit">Anmelden</button>
+   <button type="button" id="design-login-cancel">Abbrechen</button>
+  </div>
+  <p id="design-login-status" role="status"></p>
+ </form>
 </dialog>
 </main>
 <script src="Materialpreise.js?v=4"></script>
@@ -2718,7 +2734,7 @@ document.querySelector('#cost-link').addEventListener('click',()=>{
  try{sessionStorage.setItem('fw-kosten-konfiguration',JSON.stringify(configuration(suggestedPresetName())));}catch{}
 });
 let designClient, sharedDesigns=[], designUser, designAdmin=false;
-let editingDesign=null, copyOnlyDesign=false;
+let editingDesign=null, openedDesign=null, copyOnlyDesign=false;
 const saveDesign=document.querySelector('#save-design');
 const saveCopy=document.querySelector('#save-design-copy');
 const quickSave=document.querySelector('#quick-save-design');
@@ -2727,6 +2743,7 @@ const designNameField=document.querySelector('#design-name-field');
 const cancelNewDesign=document.querySelector('#cancel-new-design');
 let newDesignDraft=null;
 function setEditingDesign(record){
+ openedDesign=record;
  editingDesign=record?.editable?record:null;
  copyOnlyDesign=Boolean(record&&!record.editable);
  updateSaveTarget();
@@ -2762,8 +2779,6 @@ function startNewDesign(target,asCopy){
 function closeNewDesign(){
  if(newDesignDraft)presetName.value=newDesignDraft.previousName;
  newDesignDraft=null;
- identity.hidden=true;
- pinInput.value='';
  updateSaveTarget();
 }
 cancelNewDesign.addEventListener('click',()=>{
@@ -2772,10 +2787,6 @@ cancelNewDesign.addEventListener('click',()=>{
  saveDesign.focus();
 });
 presetName.addEventListener('input',()=>{presetStatus.textContent='';});
-const identity=document.querySelector('#design-identity');
-const authorInput=document.querySelector('#design-author');
-const pinInput=document.querySelector('#design-pin');
-try{authorInput.value=localStorage.getItem('fw-team-author')||'';}catch{}
 
 function designPalette(selections){
  const value=id=>selections?.[id]?.value;
@@ -2941,7 +2952,7 @@ async function changeSavedDesign(record,overwrite){
    if(error||!data)throw new Error('Das Design konnte nicht geändert werden. Prüfe deine Berechtigung.');
    await refreshDesigns().catch(()=>{});
  }
- if(!overwrite&&editingDesign&&record.id===editingDesign.id&&record.title===editingDesign.title)setEditingDesign(null);
+ if(!overwrite&&openedDesign&&record.id===openedDesign.id&&record.title===openedDesign.title)setEditingDesign(null);
 }
 async function deleteSavedDesign(record){
  if(!confirm('«'+record.title+'» löschen?'))return;
@@ -2955,11 +2966,75 @@ async function connectDesigns(){
  const {createClient}=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/+esm');
  return designClient??=createClient(config.url,config.publishableKey);
 }
-async function refreshDesigns(){
- const client=await connectDesigns();
+const loginDialog=document.querySelector('#design-login');
+const loginForm=document.querySelector('#design-login-form');
+const loginStatus=document.querySelector('#design-login-status');
+const loginAuthor=loginForm.elements.author;
+const loginPin=loginForm.elements.pin;
+const loginSubmit=loginForm.querySelector('[type="submit"]');
+const saveLogin=document.querySelector('#design-save-login');
+const libraryLogin=document.querySelector('#design-library-login');
+const libraryIdentity=document.querySelector('#design-library-identity');
+let designAuthor='', designCanWrite=false, saveAfterLogin=false;
+function storedDesignAuthor(){
+ try{return localStorage.getItem('fw-team-author')||'';}catch{return '';}
+}
+function updateDesignIdentity(){
+ const signedIn=designCanWrite&&Boolean(designAuthor);
+ saveLogin.hidden=libraryLogin.hidden=signedIn;
+ libraryIdentity.textContent=signedIn?'Angemeldet als '+designAuthor:'';
+}
+async function refreshDesignIdentity(client){
  const {data:{session}}=await client.auth.getSession();
  designUser=session?.user;
  designAdmin=Boolean(designUser&&!designUser.is_anonymous&&(await client.rpc('fw_is_admin')).data===true);
+ designCanWrite=designAdmin||Boolean(designUser&&(await client.rpc('fw_team_member')).data===true);
+ designAuthor=designCanWrite?storedDesignAuthor():'';
+ updateDesignIdentity();
+}
+function openDesignLogin(resumeSave=false){
+ saveAfterLogin=resumeSave;
+ loginAuthor.value=storedDesignAuthor();
+ loginPin.value='';
+ loginStatus.textContent='';
+ loginDialog.showModal();
+ (loginAuthor.value?loginPin:loginAuthor).focus();
+}
+saveLogin.onclick=()=>openDesignLogin();
+libraryLogin.onclick=()=>openDesignLogin();
+document.querySelector('#design-login-cancel').onclick=()=>loginDialog.close();
+loginDialog.addEventListener('close',()=>{loginPin.value='';});
+loginForm.addEventListener('submit',async event=>{
+ event.preventDefault();
+ const author=loginAuthor.value.trim();
+ if(!author){loginAuthor.focus();return;}
+ loginSubmit.disabled=true;
+ try{
+   const client=await connectDesigns();
+   await refreshDesignIdentity(client);
+   if(!designCanWrite){
+     if(!designUser){
+       const {error}=await client.auth.signInAnonymously();
+       if(error)throw new Error('Die Anmeldung ist gerade nicht möglich. Versuch es erneut.');
+     }
+     const {data}=await client.rpc('fw_join_team',{team_code:loginPin.value});
+     if(data!==true)throw new Error('Der PIN stimmt nicht oder es gab zu viele Versuche.');
+   }
+   try{localStorage.setItem('fw-team-author',author);}catch{}
+   await refreshDesignIdentity(client);
+   if(!designCanWrite)throw new Error('Die Anmeldung konnte nicht bestätigt werden.');
+   designAuthor=author;
+   updateDesignIdentity();
+   const resume=saveAfterLogin;
+   loginDialog.close();
+   await refreshDesigns().catch(()=>{});
+   if(resume)presetForm.requestSubmit(saveDesign);
+ }catch(error){loginStatus.textContent=error.message;}
+ finally{loginSubmit.disabled=false;}
+});
+async function refreshDesigns(){
+ const client=await connectDesigns();
+ await refreshDesignIdentity(client);
  const items=[];
  for(let offset=0;;offset+=250){
    const {data,error}=await client.from('fw_entries').select('id,title,author,owner_id,selections:payload->selections').eq('kind','design')
@@ -2969,10 +3044,15 @@ async function refreshDesigns(){
    if(data.length<250)break;
  }
  sharedDesigns=items;
+ if(openedDesign?.id){
+   const current=items.find(record=>record.id===openedDesign.id);
+   if(current)setEditingDesign({...current,editable:current.owner_id===designUser?.id});
+ }
  renderDesignCards();
 }
 renderDesignCards();
 updatePresetSuggestion();
+connectDesigns().then(refreshDesignIdentity).catch(()=>{});
 const designLibrary=document.querySelector('#saved-designs');
 async function openSavedDesigns(){
  if(!designLibrary.open)designLibrary.showModal();
@@ -3013,33 +3093,14 @@ presetForm.addEventListener('submit',async event=>{
      return;
    }
    const client=await connectDesigns();
-   let {data:{session}}=await client.auth.getSession();
-   let allowed=false;
-   if(session){
-     const membership=await client.rpc('fw_team_member');
-     const admin=session.user.is_anonymous?null:await client.rpc('fw_is_admin');
-     allowed=membership.data===true||admin?.data===true;
-   }
-   const author=authorInput.value.trim();
-   if(!author||!allowed&&!/^[0-9]{4}$/.test(pinInput.value)){
-     identity.hidden=false;
-     pinInput.closest('label').hidden=allowed;
-     (author?pinInput:authorInput).focus();
+   await refreshDesignIdentity(client);
+   if(!designCanWrite||!designAuthor){
+     openDesignLogin(true);
      return;
    }
-   if(!allowed){
-     if(!session){
-       const result=await client.auth.signInAnonymously();
-       if(result.error)throw new Error('Speichern ist gerade nicht möglich. Versuch es erneut.');
-       session=result.data.session;
-     }
-     const result=await client.rpc('fw_join_team',{team_code:pinInput.value});
-     if(result.data!==true)throw new Error('Der PIN stimmt nicht oder es gab zu viele Versuche.');
-   }
-   pinInput.value='';
+   const author=designAuthor;
    const {data,error}=await client.from('fw_entries').insert({kind:'design',title:name,author,payload:configuration(name)}).select('id').single();
    if(error)throw new Error('Das Design konnte nicht gespeichert werden. Versuch es erneut.');
-   try{localStorage.setItem('fw-team-author',author);}catch{}
    closeNewDesign();
    presetName.value=name;
    setEditingDesign({id:data.id,title:name,editable:true});
