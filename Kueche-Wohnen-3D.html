@@ -53,7 +53,7 @@ nav{display:flex;flex-wrap:wrap;gap:6px;padding:10px}
 .design-file-tools details{padding:6px 0 0;border:0}
 .design-file-tools summary{font-size:13px}
 .design-file-tools .preset-actions{margin-top:6px}
-.design-file-tools>button{font-size:13px;min-height:36px}
+.design-file-tools button{font-size:13px;min-height:36px}
 #design-cards h3{font-size:14px;margin:10px 0 4px}
 #design-manage-status{font-size:12px;color:#53665b;margin:0}
 #preset-status,.preset-suggestion{margin:0;font-size:12px;color:#53665b}
@@ -176,19 +176,23 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
 <details class="presets" open>
 <summary>Designs</summary>
 <form class="preset-controls" id="preset-form">
-<label class="choice">Name des Designs<input id="preset-name" maxlength="80" aria-describedby="design-save-target"></label>
+<label class="choice" id="design-name-field" hidden>Name des Designs<input id="preset-name" maxlength="80"></label>
 <fieldset id="design-identity" hidden style="margin:0;border:1px solid #c4cfc4;border-radius:8px"><legend>Beim ersten Speichern</legend><label class="choice">Dein Name<input id="design-author" maxlength="100" autocomplete="name"></label><label class="choice">Speicher-PIN<input id="design-pin" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}"></label></fieldset>
 <p id="design-save-target" class="preset-suggestion" hidden></p>
 <div class="preset-actions">
  <button type="submit" id="save-design">Design speichern</button>
  <button type="submit" id="save-design-copy" hidden>Als neues Design speichern</button>
+ <button type="button" id="cancel-new-design" hidden>Abbrechen</button>
 </div>
 <p id="preset-status" role="status"></p>
 </form>
 <div class="design-file-tools">
- <button type="button" id="preset-import">Design importieren</button>
+ <div class="preset-actions">
+  <button type="button" id="preset-export">Design als Datei herunterladen</button>
+  <button type="button" id="preset-import">Design von Datei importieren</button>
+ </div>
  <details><summary>Weitere Optionen</summary>
-  <div class="preset-actions"><button type="button" id="preset-export">Design herunterladen</button><button type="button" id="preset-default">Standardanordnung laden</button></div>
+  <div class="preset-actions"><button type="button" id="preset-default">Standardanordnung laden</button></div>
  </details>
  <input type="file" id="preset-file" accept=".json,application/json" hidden>
 </div>
@@ -2677,20 +2681,50 @@ let editingDesign=null;
 const saveDesign=document.querySelector('#save-design');
 const saveCopy=document.querySelector('#save-design-copy');
 const saveTarget=document.querySelector('#design-save-target');
+const designNameField=document.querySelector('#design-name-field');
+const cancelNewDesign=document.querySelector('#cancel-new-design');
+let newDesignDraft=null;
 function setEditingDesign(record){
  editingDesign=record?.editable?record:null;
- saveCopy.hidden=!editingDesign;
  updateSaveTarget();
 }
 function updateSaveTarget(){
- const renamed=editingDesign&&presetName.value.trim()&&presetName.value.trim()!==editingDesign.title;
- saveTarget.hidden=!renamed;
- saveTarget.textContent=renamed?'Der neue Name gilt beim Speichern als neues Design.':'';
+ saveCopy.hidden=!editingDesign||Boolean(newDesignDraft);
+ designNameField.hidden=!newDesignDraft;
+ cancelNewDesign.hidden=!newDesignDraft;
+ saveDesign.textContent=newDesignDraft?.asCopy?'Neues Design speichern':'Design speichern';
+ saveTarget.hidden=!editingDesign||Boolean(newDesignDraft);
+ saveTarget.textContent=editingDesign?'Geöffnet: '+editingDesign.title:'';
 }
-presetName.addEventListener('input',()=>{
- updateSaveTarget();
+function startNewDesign(target,asCopy){
+ const previousName=presetName.value;
+ let name=previousName.trim()||suggestedPresetName();
+ if(asCopy&&name===target?.title){
+   const base=name.slice(0,70)+' (Kopie';
+   const used=new Set([...presets.keys(),...sharedDesigns.map(record=>record.title)]);
+   name=base+')';
+   for(let n=2;used.has(name);n++)name=base+' '+n+')';
+ }
+ newDesignDraft={previousName,asCopy};
+ presetName.value=name;
  presetStatus.textContent='';
+ updateSaveTarget();
+ presetName.focus();
+ presetName.select();
+}
+function closeNewDesign(){
+ if(newDesignDraft)presetName.value=newDesignDraft.previousName;
+ newDesignDraft=null;
+ identity.hidden=true;
+ pinInput.value='';
+ updateSaveTarget();
+}
+cancelNewDesign.addEventListener('click',()=>{
+ closeNewDesign();
+ presetStatus.textContent='';
+ saveDesign.focus();
 });
+presetName.addEventListener('input',()=>{presetStatus.textContent='';});
 const identity=document.querySelector('#design-identity');
 const authorInput=document.querySelector('#design-author');
 const pinInput=document.querySelector('#design-pin');
@@ -2836,10 +2870,21 @@ presetForm.addEventListener('submit',async event=>{
  event.preventDefault();
  if(saveDesign.disabled)return;
  const target=editingDesign;
- const asCopy=event.submitter===saveCopy;
+ const copyRequested=event.submitter===saveCopy;
+ if(!newDesignDraft&&(!target||copyRequested)){
+   startNewDesign(target,copyRequested);
+   return;
+ }
+ const asCopy=Boolean(newDesignDraft?.asCopy);
+ const name=presetName.value.trim();
+ if(newDesignDraft&&!name){
+   presetStatus.textContent='Gib dem Design einen Namen.';
+   presetName.focus();
+   return;
+ }
  saveDesign.disabled=saveCopy.disabled=true;
  try{
-   if(target&&!asCopy){
+   if(target&&!newDesignDraft){
      await changeSavedDesign(target,true);
      presetName.value=target.title;
      updateSaveTarget();
@@ -2871,17 +2916,10 @@ presetForm.addEventListener('submit',async event=>{
      if(result.data!==true)throw new Error('Der PIN stimmt nicht oder es gab zu viele Versuche.');
    }
    pinInput.value='';
-   let name=presetName.value.trim()||suggestedPresetName();
-   if(asCopy&&name===target?.title){
-     const base=name.slice(0,70)+' (Kopie';
-     const used=new Set([...presets.keys(),...sharedDesigns.map(record=>record.title)]);
-     name=base+')';
-     for(let n=2;used.has(name);n++)name=base+' '+n+')';
-   }
    const {data,error}=await client.from('fw_entries').insert({kind:'design',title:name,author,payload:designPayload(name)}).select('id').single();
    if(error)throw new Error('Das Design konnte nicht gespeichert werden. Versuch es erneut.');
    try{localStorage.setItem('fw-team-author',author);}catch{}
-   identity.hidden=true;
+   closeNewDesign();
    presetName.value=name;
    setEditingDesign({id:data.id,title:name,editable:true});
    presetStatus.textContent=asCopy?'Neues Design gespeichert.':'Design gespeichert.';
@@ -2891,6 +2929,7 @@ presetForm.addEventListener('submit',async event=>{
  finally{saveDesign.disabled=saveCopy.disabled=false;}
 });
 function applyConfiguration(preset){
+ closeNewDesign();
  setEditingDesign(null);
  for(const [id,control] of materialControls){
    const value=preset.selections[id]?.value;
