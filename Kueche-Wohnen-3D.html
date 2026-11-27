@@ -212,8 +212,8 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
 <h2 id="planning-title">Planungsangaben</h2>
 <h3>Küche</h3>
 <p>Die Wandzeile enthält einen 60 cm breiten, hohen Kühl-Gefrierschrank, Arbeitsfläche sowie Ober- und Unterschränke. Zur Seitenwand sitzt eine 10 cm breite Passleiste, oben bündig mit dem Kühlschrank. Durchgehende Sockel schliessen die sichtbaren Bodenfugen. Die Kühlschranktür ist rechts angeschlagen und öffnet zum Arbeitsgang. In der Draufsicht sind die Öffnungsbereiche orange markiert.</p>
-<p>Die 200 × 65 cm grosse Halbinsel hat einen 50-cm-Spülenunterschrank mit Abfallauszug direkt unter dem Becken. Beim Abzug im Oberschrank steht der vollintegrierte 60-cm-Geschirrspüler wandseitig. Daneben folgen Spüle und ein 80-cm-Schubladenblock. Beim Inselkochfeld mit Backofen folgen ein 60-cm-Backofenfeld und ein 80-cm-Schubladenblock. Bei V-ZUG folgen 90 cm unter dem Kochfeld und 50 cm für Schubladen; bei BORA sind es 80 und 60 cm.</p>
-<p>Freie Schubladenblöcke haben oben eine flache Schublade für Besteck und darunter zwei tiefe Auszüge. Unter Kochfeldern mit integriertem Abzug bleiben zwei Auszüge und eine feste Geräteblende. In Varianten mit Kochfeld auf der Halbinsel sitzt der 60-cm-Geschirrspüler neben dem Kühlschrank. Die Planung verwendet 60-cm-Gerätenischen nach dem Euro-Raster; Leitungswege, Auszugtiefen, Passleisten und Gerätefreigaben sind vor Bestellung zu prüfen.</p>
+<p>Die Halbinsel misst 200 × 65 cm. Beim Abzug im Oberschrank folgen auf den wandseitigen 60-cm-Geschirrspüler ein 50-cm-Spülenunterschrank und 80 cm Auszüge. Bei Kochfeld auf der Halbinsel beginnt die Zeile mit 15 cm Stauraum und einem 55-cm-Spülenunterschrank mit Abfallauszug. Zwischen Spüle und Kochfeld liegen bei V-ZUG 30 cm, bei BORA 40 cm und beim hängenden Abzug 50 cm Schubladenmodul. Unter dem Kochfeld sind 90, 80 beziehungsweise 60 cm vorgesehen.</p>
+<p>Freie Schubladenblöcke haben oben eine flache Schublade für Besteck und darunter zwei tiefe Auszüge. Unter Kochfeldern mit integriertem Abzug sind eine feste Geräteblende und zwei Auszüge mit modellabhängiger Tiefe vorgesehen. In diesen Varianten und beim hängenden Abzug sitzt der 60-cm-Geschirrspüler neben dem Kühlschrank. Das 55-cm-Spülenmodul ist ein Möbelmass. Einbauausschnitte, Lüftungsweg und Freiräume richten sich nach dem gewählten Gerät und sind vor Bestellung zu prüfen.</p>
 <h3>Wohnen und Essen</h3>
 <p>Quer verlegtes, mattes Eichenparkett mit sichtbaren Ästen. Der anthrazitgraue Schiefer in der Küche endet an der Wohnkante der Halbinsel. Über «Parkett längs» lässt sich die Verlegerichtung drehen. Über «Türblätter», «Türrahmen» und «Fenster» lässt sich die Ansicht vereinfachen.</p>
 <p>Der freistehende Esstisch ist quer zur rechten Fensterwand ausgerichtet und bietet Platz für vier Stühle. Zwischen der rechten Tischkante und der Sofawand liegen rund 1,35 m. Der Durchgang aus der Küche liegt auf dieser Seite. Im Eingangsbereich und im Wohnzimmer sind die Nischen mit hohen Einbauschränken belegt. Das Sofa schaut zum TV auf dem schwebenden pastellfliederfarbenen Lowboard. Das Lowboard endet rund 21 cm vor der Schlafzimmertür. Das gegenüber der Küche liegende Fenster an der unteren Fassadenseite ist bodentief eingezeichnet.</p>
@@ -1064,41 +1064,53 @@ function updateContactShadows(){
  gl.uniform4fv(floorOccluderUniform,shadows.flatMap(shadow=>shadow.slice(0,4)));
  gl.uniform1fv(floorAngleUniform,shadows.map(shadow=>shadow[4]));
 }
-function build(){
- updateContactShadows();
- const data=[],glass=[];
- const wallHob=cookingSetup==='ceramicWall';
- const peninsulaStart=5.45;
- const sinkModuleWidth=.50;
- const originalSink=model.find(piece=>piece.name==='Spuele');
- const sinkShift=peninsulaStart+(wallHob?.60:0)+sinkModuleWidth/2-originalSink.x-originalSink.w/2;
+// Module widths are cabinet outside widths; appliance cutouts are separate.
+function islandLayout(setup, originalSink, originalHob){
+ const wallHob=setup==='ceramicWall';
+ const ceramic=setup==='ceramicIsland';
+ const bora=setup==='boraWallOven';
+ const vzug=setup==='integrated';
+ const peninsulaStart=wallHob?5.45:5.43;
+ const specification=wallHob?[[.60,'dishwasher'],[.50,'sink'],[.80,'drawers']]
+   :vzug?[[.15,'pullout'],[.55,'sink'],[.30,'drawers'],[.90,'extractor']]
+   :bora?[[.15,'pullout'],[.55,'sink'],[.40,'drawers'],[.80,'extractor']]
+   :[[.15,'pullout'],[.55,'sink'],[.50,'drawers'],[.60,'oven'],[.15,'pullout']];
+ let edge=peninsulaStart;
+ const modules=specification.map(([width,type])=>{
+   const module={left:edge,right:edge+width,width,type,center:edge+width/2};
+   edge=module.right;
+   return module;
+ });
+ const sinkModule=modules.find(module=>module.type==='sink');
+ const sinkShift=sinkModule.center-originalSink.x-originalSink.w/2;
  const sink={...originalSink,x:originalSink.x+sinkShift};
- const nextIslandModule=peninsulaStart+sinkModuleWidth;
- const sinkRim=sink.z+.003;
- const sinkDepth=.19;
- const originalHob=model.find(piece=>piece.name==='Kochfeld');
- const originalHobCenter=originalHob.x+originalHob.w/2;
- const ceramic=cookingSetup==='ceramicIsland';
- const bora=cookingSetup==='boraWallOven';
- const vzug=cookingSetup==='integrated';
- const ovenInWall=bora||vzug||wallHob;
- const peninsulaModules=wallHob?[[.60,'dishwasher'],[sinkModuleWidth,'sink'],[.80,'drawers']]
-   :vzug?[[sinkModuleWidth,'sink'],[.90,'extractor'],[.50,'drawers']]
-   :bora?[[sinkModuleWidth,'sink'],[.80,'extractor'],[.60,'drawers']]
-   :[[sinkModuleWidth,'sink'],[.60,'oven'],[.80,'drawers']];
- const wallModules=wallHob?[[.80,'drawers'],[.60,'oven'],[.80,'drawers']]
-   :ovenInWall?[[.60,'dishwasher'],[.60,'oven'],[.80,'drawers'],[.20,'door']]
-   :[[.60,'dishwasher'],[.80,'drawers'],[.80,'drawers']];
- const hobCenter=nextIslandModule+peninsulaModules[1][0]/2;
- const wallOvenCenter=wallHob?7.26:7.06;
+ const cookModule=modules.find(module=>module.type==='extractor'||module.type==='oven');
+ const hobCenter=cookModule?.center??originalHob.x+originalHob.w/2;
  const integratedHob={...originalHob,x:hobCenter-originalHob.w/2};
- const wallCooktop={...originalHob,x:wallOvenCenter-.30,y:1.81,w:.60,d:.51,z:.885,h:.005};
- const hobCabinet={left:nextIslandModule,right:nextIslandModule+peninsulaModules[1][0],sockelTop:.12};
- const hob=ceramic?{...integratedHob,x:hobCenter-.30,w:.60,y:integratedHob.y-.0045,d:.51,z:.945,h:.005}:bora?{...integratedHob,x:hobCenter-.29,w:.58,y:3.6175,d:.515}:integratedHob;
+ const hob=ceramic?{...integratedHob,x:hobCenter-.30,w:.60,y:integratedHob.y-.0045,d:.51,z:.945,h:.005}
+   :bora?{...integratedHob,x:hobCenter-.29,w:.58,y:3.6175,d:.515}:integratedHob;
  const hobOpening=ceramic
    ?{x:hobCenter-.28,y:hob.y+.01,w:.56,d:.49}
    :bora?{x:hob.x-.002,y:hob.y-.002,w:.584,d:.519}
    :{x:hob.x-.003,y:hob.y-.003,w:.767,d:.507};
+ return {wallHob,ceramic,bora,vzug,peninsulaStart,specification,sink,sinkShift,cookModule,hobCenter,hob,hobOpening};
+}
+function build(){
+ updateContactShadows();
+ const data=[],glass=[];
+ const originalSink=model.find(piece=>piece.name==='Spuele');
+ const originalHob=model.find(piece=>piece.name==='Kochfeld');
+ const {wallHob,ceramic,bora,vzug,peninsulaStart,specification:peninsulaModules,sink,sinkShift,
+   cookModule,hobCenter,hob,hobOpening}=islandLayout(cookingSetup,originalSink,originalHob);
+ const ovenInWall=bora||vzug||wallHob;
+ const wallModules=wallHob?[[.80,'drawers'],[.60,'oven'],[.80,'drawers']]
+   :ovenInWall?[[.60,'dishwasher'],[.60,'oven'],[.80,'drawers'],[.20,'door']]
+   :[[.60,'dishwasher'],[.80,'drawers'],[.80,'drawers']];
+ const wallOvenCenter=wallHob?7.26:7.06;
+ const wallCooktop={...originalHob,x:wallOvenCenter-.30,y:1.81,w:.60,d:.51,z:.885,h:.005};
+ const originalHobCenter=originalHob.x+originalHob.w/2;
+ const sinkRim=sink.z+.003;
+ const sinkDepth=.19;
  const activePlacements=new Map();
  for(const [id,position] of Object.entries(furniturePositions)){
    const bounds=furnitureBounds(id);
@@ -1919,6 +1931,7 @@ function build(){
    });
  }
  function cabinetFront(x,width,z,height,island,handle=true){
+   if(width<=.006)return;
    const y=island?3.543:2.36;
    const front={name:'Küchenfront',material:island?'Insel':'Front',x:x+.002,y,w:width-.004,d:.024,z,h:height-.003};
    addObject(front,undefined);
@@ -1946,7 +1959,7 @@ function build(){
      }else if(type==='extractor'){
        cabinetFront(x,width,base,.30,island);
        cabinetFront(x,width,base+.30,.30,island);
-       cabinetFront(x,width,base+.60,top-base-.60,island,false);
+       cabinetFront(x,width,.70,top-.70,island,false);
      }else if(type==='oven'){
        const ovenStart=island?.27:.17;
        cabinetFront(x,width,base,ovenStart-base,island,false);
@@ -1960,13 +1973,19 @@ function build(){
    if(!activeFurniture(b,id)||removedFurniture.has(id))return;
    if(b.name==='Halbinsel_Korpus'){
      const washerLeft=peninsulaStart,washerRight=washerLeft+.60;
-     const ovenLeft=hobCenter-.30,ovenRight=hobCenter+.30;
+     const ovenLeft=cookModule?.left,ovenRight=cookModule?.right;
      if(wallHob){
        addObject({...b,w:washerLeft-b.x},undefined);
        addObject({...b,x:washerRight,w:b.x+b.w-washerRight},undefined);
      }else if(ceramic){
        addObject({...b,w:ovenLeft-b.x},undefined);
        addObject({...b,x:ovenRight,w:b.x+b.w-ovenRight},undefined);
+     }else if(vzug||bora){
+       // Reserve the upper appliance bay, separate from the sink recess and drawers.
+       const {left,right}=cookModule;
+       addObject({...b,w:left-b.x},undefined);
+       addObject({...b,x:left,w:right-left,h:.715-b.z,sinkCut:true},undefined);
+       addObject({...b,x:right,w:b.x+b.w-right},undefined);
      }else addObject(b,undefined);
      drawKitchenModules(peninsulaModules,peninsulaStart,true);
      return;
@@ -1990,8 +2009,8 @@ function build(){
      }
      return;
    }
-   if(vzug&&b.name==='Halbinsel_Sockel_Bedienseite'){
-     const {left,right,sockelTop}=hobCabinet;
+   if((vzug||bora)&&b.name==='Halbinsel_Sockel_Bedienseite'){
+     const {left,right}=cookModule,sockelTop=.12;
      addObject({...b,w:left-b.x},undefined);
      addObject({...b,x:right,w:b.x+b.w-right},undefined);
      const grille={...b,name:'Umluftgitter',x:left+.08,y:b.y+.005,w:right-left-.16,d:.015,z:.020,h:sockelTop-.025,material:'Kochfeld'};
@@ -2179,6 +2198,13 @@ function drawDimensions(width,height){
    measure(7.66,1.74,7.66,2.39,'65 cm',-24,4),
    measure(5.40,4.20,5.82,4.20,'bündig',0,18)
  ].join('');
+ const plan=islandLayout(cookingSetup,model.find(b=>b.name==='Spuele'),model.find(b=>b.name==='Kochfeld'));
+ const mm=value=>Math.round((value+1e-9)*1000)+' mm';
+ if(!plan.wallHob){
+   const sinkRight=plan.sink.x+plan.sink.w;
+   dimensions.innerHTML+=measure(5.40,3.45,plan.sink.x,3.45,mm(plan.sink.x-5.40),0,-6)
+     +measure(sinkRight,3.45,plan.hob.x,3.45,mm(plan.hob.x-sinkRight),0,-6);
+ }
 }
 function drawGlass(){
  if(!glassCount)return;
@@ -2633,7 +2659,12 @@ cookingSelect.closest('label').append(dishwasherLocation);
 function updateDishwasherLocation(){
  dishwasherLocation.textContent=cookingSetup==='ceramicWall'
    ?'Halbinsel von der Wand aus: 60 cm Geschirrspüler, 50 cm Spülenunterschrank mit Abfallauszug, 80 cm Schubladenblock.'
-   :'Geschirrspüler: in der Wandzeile direkt neben dem Kühlschrank. Du erkennst ihn an der durchgehenden 60-cm-Möbelfront mit einem Griff.';
+   :(() => {
+     const plan=islandLayout(cookingSetup,model.find(b=>b.name==='Spuele'),model.find(b=>b.name==='Kochfeld'));
+     const wall=Math.round((plan.sink.x-5.40)*1000);
+     const gap=Math.round((plan.hob.x-plan.sink.x-plan.sink.w+1e-9)*1000);
+     return 'Spüle: '+wall+' mm zur Wand, '+gap+' mm bis zum Kochfeld. 55-cm-Spülenschrank mit Abfallauszug. Geschirrspüler (60 cm) neben dem Kühlschrank.';
+   })();
 }
 updateDishwasherLocation();
 chooser('worktop','Arbeitsplatte',{'Stein':'current','Kunststein · Quarzkomposit':'quartz','Steinoptik · Laminat':'stoneLaminate','Terrazzo · Kunststein':'terrazzo','Schwarzer Granit':'black','Marquina · dunkler Marmor':'marquina','Weiss · Quarzkomposit':'white','Eichenoptik':'oak','Betonoptik · Laminat':'concrete','Travertinoptik · Keramik':'travertine','Marmoroptik · Quarzkomposit':'marble'},worktop,(value,redraw)=>{
