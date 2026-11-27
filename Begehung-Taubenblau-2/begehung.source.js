@@ -92,7 +92,7 @@ function look(dx,dy){
 }
 const query=new URLSearchParams(location.search);
 const requested=query.get('raum');
-const variant='taubenblau-2';
+const variant=query.get('variante')==='puderblau'?'puderblau':'taubenblau-2';
 const returnLink=document.querySelector('#pano-return');
 let panoramaRoom=requested??'kueche';
 function updateReturnLink(){
@@ -116,15 +116,10 @@ renderer.setAnimationLoop(time=>{
   renderer.render(scene,camera);
 });
 async function loadScene(loader){
-  if(location.port==='8768')return loader.loadAsync('Taubenblau-2.glb');
-  const paths=['aa','ab','ac','ad','ae','af','ag'].map(name=>'szene.glb.gz.'+name);
-  const parts=await Promise.all(paths.map(async path=>{
-    const response=await fetch(path);
-    if(!response.ok)throw Error('Szenendatei konnte nicht geladen werden.');
-    return response.arrayBuffer();
-  }));
-  const compressed=new Blob(parts).stream();
-  const bytes=await new Response(compressed.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+  const filename=variant==='puderblau'?'Puderblau-Begehung.bin':'Taubenblau-2-Begehung.bin';
+  const response=await fetch('../'+filename);
+  if(!response.ok||!response.body)throw Error('Szenendatei konnte nicht geladen werden.');
+  const bytes=await new Response(response.body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
   return loader.parseAsync(bytes,new URL('./',location.href).href);
 }
 async function load(){
@@ -138,6 +133,10 @@ async function load(){
     new THREE.TextureLoader().loadAsync(location.port==='8768'?'Alpen-Ausblick.jpg':'../Alpen-Ausblick.jpg')
   ]);
   walls=configuration.walls.map(([x1,y1,x2,y2])=>[x1,-y2,x2,-y1]);
+  if(variant==='puderblau'){
+    gltf.scene.scale.z=-1;
+    configuration.name='Puderblau · Schwarzer Granit · Nebelblau';
+  }
   document.querySelector('#title').textContent='Blender-Begehung · '+configuration.name;
   document.title=document.querySelector('#title').textContent;
   gltf.scene.traverse(object=>{
