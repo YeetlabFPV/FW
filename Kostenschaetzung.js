@@ -34,6 +34,7 @@ const rate = (id, category, name, quantity, unit, variants, reference, note = ''
   ({id, category, name, quantity, unit, variants, reference, note});
 const retain = product('Bestand behalten', 0, 0);
 const surfaces = {
+  marquina:product('Marquina · Richtwert Naturstein',145,205),
   paint: product('Einfarbig · neuer Anstrich', 25, 60),
   blue: product('Nebelblau · schmale Fliesen', 115, 205),
   petrol: product('Petrol · glasierte Stäbchen', 135, 255),
@@ -57,6 +58,7 @@ const rows = [
   },'ikea','Budgetansatz für ca. 4,3 m Plattenlänge plus Hoch- und Oberschränke. Geräte, Abdeckung und Anschlüsse separat.'),
   rate('k-top','kitchen','Arbeitsplatte inkl. Kanten, üblichem Aufmass und Montage',4.29,'lfm',{
     current:product('Steinoptik · neuer Naturstein',700,1400),
+    marquina:product('Marquina · Richtwert Naturstein',700,1100),
     quartz:product('Kunststein · Quarzkomposit',550,900),
     stoneLaminate:product('Steinoptik · Laminat',150,300),
     retained:retain,
@@ -73,6 +75,7 @@ const rows = [
     slate:product('Schiefer / Schieferoptik',135,240),
     linoleum:product('Linoleum inkl. Verkleben',100,175),
     oak:product('Eichenparkett',110,190),
+    cementRust:product('Zementrauten · Rostrot',155,215),
     rhomboid:product('Rauten · Altrosa',150,260),
     cubes:product('Würfelmuster · dreifarbig',155,275),
     terracotta:product('Terracotta · quadratische Fliesen',125,235),
@@ -95,6 +98,7 @@ const rows = [
   rate('b-demo','bath','Rückbau Bad und Entsorgung',1,'Pausch.',{standard:product('Alte Sanitärobjekte und Oberflächen',950,2800),partial:product('Nur auszutauschende Objekte',450,1200)},'labour','Bei Überstreichen oder Teilumbau Umfang separat anpassen.'),
   rate('b-water','bath','Sanitärleitungen und Anschlüsse',1,'Pausch.',{standard:product('Anpassungen im Bad',1750,4300),partial:product('Anschlüsse weitgehend behalten',700,1750)},'bath','Leitungen und Anschlussarbeiten, Sanitärobjekte separat.'),
   rate('b-floor','bath','Badboden ausserhalb des Duschplatzes',3.03,'m²',{
+    marquina:product('Marquina · Richtwert Naturstein',155,225),
     neu:product('Neue Standardfliesen',120,225),bestand:retain,
     sand:product('Sandbeige · quadratisch',125,225),slate:product('Schiefergrau · quadratisch',130,240),
     terracotta:product('Terracotta · quadratisch',135,250),white:product('Kreideweiss · rechteckig',125,225),
