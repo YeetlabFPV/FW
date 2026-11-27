@@ -1836,8 +1836,7 @@ function build(){
      if(type!=='dishwasher'&&type!=='oven'&&!island){
        addObject({name:'Küchenkorpus',material:'Front',x:x+.004,y:1.75,w:width-.008,d:.60,z:base,h:height},undefined);
      }
-     if(type==='drawers'||type==='dishwasher'){
-       // The two matching fronts attach to one door on the integrated appliance.
+     if(type==='drawers'){
        const split=height/2;
        cabinetFront(x,width,base,split,island);
        cabinetFront(x,width,base+split,height-split,island);
@@ -2517,8 +2516,8 @@ dishwasherLocation.setAttribute('aria-live','polite');
 cookingSelect.closest('label').append(dishwasherLocation);
 function updateDishwasherLocation(){
  dishwasherLocation.textContent=cookingSetup==='ceramicWall'
-   ?'Geschirrspüler: in der Halbinsel direkt neben der Spüle. Die beiden sichtbaren Fronten gehören zu einer Gerätetür.'
-   :'Geschirrspüler: in der Wandzeile direkt neben dem Kühlschrank. Die beiden sichtbaren Fronten gehören zu einer Gerätetür.';
+   ?'Geschirrspüler: in der Halbinsel direkt neben der Spüle. Du erkennst ihn an der durchgehenden 60-cm-Möbelfront mit einem Griff.'
+   :'Geschirrspüler: in der Wandzeile direkt neben dem Kühlschrank. Du erkennst ihn an der durchgehenden 60-cm-Möbelfront mit einem Griff.';
 }
 updateDishwasherLocation();
 chooser('worktop','Arbeitsplatte',{'Stein':'current','Kunststein · Quarzkomposit':'quartz','Steinoptik · Laminat':'stoneLaminate','Terrazzo · Kunststein':'terrazzo','Schwarzer Granit':'black','Weiss · Quarzkomposit':'white','Eichenoptik':'oak','Betonoptik · Laminat':'concrete','Travertinoptik · Keramik':'travertine','Marmoroptik · Quarzkomposit':'marble'},worktop,(value,redraw)=>{
