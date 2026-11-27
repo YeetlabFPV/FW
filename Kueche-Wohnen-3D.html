@@ -79,9 +79,23 @@ canvas.placing,canvas.panning{cursor:move}
 #dimensions line{stroke:#31584b;stroke-width:1.5}
 #dimensions text{fill:#224638;font:600 13px system-ui;paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round;text-anchor:middle}
 canvas{width:100%;height:calc(100dvh - 170px);min-height:360px;display:block;touch-action:none;cursor:grab;background:#e9eee8}
-section:fullscreen{display:flex;flex-direction:column;border:0;border-radius:0;background:#fff}
-section:fullscreen .stage{flex:1;min-height:0}
-section:fullscreen canvas{height:100%;min-height:0}
+main:fullscreen{
+ width:100%;height:100%;box-sizing:border-box;padding:10px;
+ grid-template-columns:minmax(0,1fr) clamp(270px,25vw,380px);
+ grid-template-rows:minmax(0,1fr);gap:10px;background:#f4f4ee;
+}
+main:fullscreen>section:first-child{display:flex;flex-direction:column;min-height:0}
+main:fullscreen .stage{flex:1;min-height:0}
+main:fullscreen canvas{height:100%;min-height:0}
+main:fullscreen>aside{min-height:0;max-height:none}
+main:fullscreen>.planning-tile{display:none}
+main:fullscreen:has(.stage.walking){grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
+main:fullscreen:has(.stage.walking)>aside{display:none}
+@media(max-width:780px){
+ main:fullscreen{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,2fr) minmax(0,1fr)}
+ main:fullscreen>section:first-child>.toolbar{max-height:34%;overflow:auto}
+ main:fullscreen>aside{padding:10px}
+}
 [hidden]{display:none!important}
 .stage:fullscreen,.stage.expanded{width:100%;height:100%;background:#e9eee8}
 .stage.expanded{position:fixed;inset:0;z-index:10}
@@ -94,7 +108,7 @@ body.walk-expanded{overflow:hidden}
 .walk-actions{position:absolute;right:12px;top:12px;left:12px;display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap;pointer-events:none}
 .walk-actions button,.walk-actions a.control{pointer-events:auto;background:#f8faf6ed}
 .walk-actions button[aria-pressed="true"]{background:#38584b}
-@media(max-width:780px){section:not(:fullscreen) .stage.walking:not(:fullscreen):not(.expanded) canvas{height:70dvh;min-height:0}}
+@media(max-width:780px){main:not(:fullscreen) .stage.walking:not(:fullscreen):not(.expanded) canvas{height:70dvh;min-height:0}}
 footer{padding:8px 12px;font-size:13px;color:#4a5b51}
 @media(max-width:780px){main{grid-template-columns:1fr}.planning-tile{grid-row:2}body{padding:12px}aside{max-height:none}}
 </style>
@@ -2060,7 +2074,7 @@ async function toggleFullscreen(target){
    if(target===stage&&walking)setExpanded(true);
  }
 }
-fullscreenButton.onclick=()=>toggleFullscreen(canvas.closest('section'));
+fullscreenButton.onclick=()=>toggleFullscreen(canvas.closest('main'));
 walkFullscreenButton.onclick=()=>toggleFullscreen(stage);
 document.addEventListener('fullscreenchange',updateFullscreenButtons);
 function drawDimensions(width,height){
