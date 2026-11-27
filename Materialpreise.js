@@ -5,7 +5,7 @@
 // Pro Option: Preisstufe, unterer und oberer Ansatz in CHF je Einheit.
 const materialPriceGuide = {
   'k-top': {
-    current:[3,650,1050], stoneLaminate:[1,150,300], terrazzo:[3,750,1150], black:[3,680,1100], white:[3,650,1050],
+    current:[3,650,1050], quartz:[2,550,900], stoneLaminate:[1,150,300], terrazzo:[3,750,1150], black:[3,680,1100], white:[3,650,1050],
     oak:[1,150,300], solidWood:[2,350,650], concrete:[1,170,320], travertine:[3,850,1300], marble:[3,700,1100]
   },
   'k-floor': {

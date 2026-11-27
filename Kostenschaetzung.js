@@ -57,6 +57,7 @@ const rows = [
   },'ikea','Budgetansatz für ca. 4,3 m Plattenlänge plus Hoch- und Oberschränke. Geräte, Abdeckung und Anschlüsse separat.'),
   rate('k-top','kitchen','Arbeitsplatte inkl. Kanten, üblichem Aufmass und Montage',4.29,'lfm',{
     current:product('Steinoptik · neuer Naturstein',700,1400),
+    quartz:product('Kunststein · Quarzkomposit',550,900),
     stoneLaminate:product('Steinoptik · Laminat',150,300),
     retained:retain,
     terrazzo:product('Terrazzo · Kunststein',650,1300),
