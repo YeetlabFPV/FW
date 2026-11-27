@@ -2044,6 +2044,10 @@ function build(){
    }
    if(b.name.startsWith('Oberschrank_')){
      if(b.name==='Oberschrank_1'){
+       const fridge=model.find(piece=>piece.name==='Kuehlschrank_Vollgroesse');
+       const fillerX=fridge.x+fridge.w;
+       addObject({...b,name:'Oberschrank_Passleiste_am_Hochschrank',x:fillerX,
+         w:uppers[0].x-fillerX,y:2.09,d:.016,z:2.04-uppers[0].units*SMS_UNIT,h:uppers[0].units*SMS_UNIT},undefined);
        for(const {x,width,units} of uppers){
          const h=units*SMS_UNIT,z=2.04-h;
          addObject({...b,x:x+.003,w:width-.006,z,h},undefined);
