@@ -2949,12 +2949,23 @@ async function changeSavedDesign(record,overwrite){
    renderDesignCards();
  }else{
    const client=await connectDesigns();
+   const legacyDelete=!overwrite&&Boolean(record.owner_id)&&record.owner_id!==designUser?.id&&!designAdmin;
+   if(legacyDelete){
+     // A session may contain a freshly updated user object but an older access token.
+     const {data,error}=await client.auth.refreshSession();
+     if(error||!data.session)throw new Error('Die Anmeldung konnte nicht erneuert werden. Melde dich erneut an.');
+   }
    const entries=client.from('fw_entries');
    const change=overwrite?entries.update({payload:configuration(record.title)}):entries.delete();
    const {data,error}=await change.eq('id',record.id).eq('kind','design').select('id').maybeSingle();
    if(error||!data){
      if(overwrite)throw new Error('Das Design konnte nicht geändert werden. Prüfe deine Berechtigung.');
-     if(!error||error.code==='42501')throw new Error('Die Datenbank hat das Löschen nicht bestätigt. Prüfe, ob du mit dem Konto angemeldet bist, dem das Design gehört.');
+     if(!error||error.code==='42501'){
+       const reason=legacyDelete
+         ?'Dieses ältere Design gehört zu einer anderen Anmeldung. Öffne es mit der ursprünglichen Anmeldung oder lass es von einem Projektadmin löschen.'
+         :'Die Datenbank hat das Löschen nicht bestätigt. Lade die Designliste neu und versuche es erneut.';
+       throw new Error(reason);
+     }
      throw new Error('Das Design konnte nicht gelöscht werden. Bitte versuche es erneut.');
    }
    if(overwrite)await refreshDesigns().catch(()=>{});
@@ -3063,6 +3074,8 @@ loginForm.addEventListener('submit',async event=>{
    }
    const {error}=await client.auth.updateUser({data:{fw_design_author:author}});
    if(error)throw new Error('Dein Name konnte nicht gespeichert werden. Versuch es erneut.');
+   const {data:refreshed,error:refreshError}=await client.auth.refreshSession();
+   if(refreshError||!refreshed.session)throw new Error('Die Anmeldung konnte nicht erneuert werden. Versuch es erneut.');
    try{localStorage.setItem('fw-team-author',author);}catch{}
    await refreshDesignIdentity(client);
    if(!designCanWrite)throw new Error('Die Anmeldung konnte nicht bestätigt werden.');
