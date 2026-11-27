@@ -2737,10 +2737,7 @@ function renderDesignCards(){
        card.append(button);
      }
      action('Laden',()=>loadSavedDesign(record));
-     if(record.editable){
-       action('Überschreiben',()=>manageDesign(record,'overwrite'));
-       action('Löschen',()=>manageDesign(record,'delete'));
-     }
+     if(record.editable)action('Löschen',()=>deleteSavedDesign(record));
      group.append(card);
    }
  }
@@ -2777,15 +2774,10 @@ async function changeSavedDesign(record,overwrite){
  }
  if(!overwrite&&editingDesign&&record.id===editingDesign.id&&record.title===editingDesign.title)setEditingDesign(null);
 }
-async function manageDesign(record,operation){
- const overwrite=operation==='overwrite';
- if(!confirm(overwrite?'«'+record.title+'» mit dem aktuellen Design überschreiben?':'«'+record.title+'» löschen?'))return;
- await changeSavedDesign(record,overwrite);
- if(overwrite){
-   setEditingDesign(record);
-   presetName.value=record.title;
- }
- manageStatus.textContent=overwrite?'Design überschrieben.':'Design gelöscht.';
+async function deleteSavedDesign(record){
+ if(!confirm('«'+record.title+'» löschen?'))return;
+ await changeSavedDesign(record,false);
+ manageStatus.textContent='Design gelöscht.';
 }
 async function connectDesigns(){
  if(designClient)return designClient;
