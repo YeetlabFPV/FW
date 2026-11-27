@@ -68,14 +68,19 @@ button[aria-pressed="true"]{background:#38584b;color:white}
 canvas.placing,canvas.panning{cursor:move}
 #dimensions .placement-outline{fill:#38584b20;stroke:#31584b;stroke-width:2;stroke-dasharray:5 3}
 .stage{position:relative}
-.saved-designs{margin-top:14px;border-top:1px solid #dbdfd6;padding-top:10px}
-.design-cards{display:grid;gap:9px;margin:8px 0 12px}
-.design-card{display:grid;grid-template-columns:76px minmax(0,1fr);align-items:start;gap:8px;padding:8px;background:#f8faf6;border:1px solid #d6ded5;border-radius:8px}
-.design-card img,.design-placeholder{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:5px;background:#e9eee8}
-.design-placeholder{display:grid;place-items:center;color:#456052;font-size:10px;text-align:center}
-.design-card p{margin:0 0 5px;font-size:13px;font-weight:650;overflow-wrap:anywhere}
-.design-card button{margin:0 4px 3px 0;font-size:12px;min-height:32px}
+#saved-designs{box-sizing:border-box;width:min(960px,calc(100% - 24px));max-height:calc(100dvh - 24px);overflow:auto;padding:0 18px 14px;border:1px solid #d6ded5;border-radius:14px;background:#fff;color:inherit}
+#saved-designs::backdrop{background:#18241ec7}
+.design-library-header{position:sticky;top:0;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 0;background:#fff;border-bottom:1px solid #e1e6de}
+.design-library-header h2{font-size:clamp(17px,4vw,23px);margin:0}
+.design-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px;margin:8px 0 16px}
+.design-card{min-width:0;padding:10px;background:#f8faf6;border:1px solid #d6ded5;border-radius:8px}
+.design-card img,.design-placeholder{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:5px;background:#e9eee8}
+.design-placeholder{display:grid;place-items:center;color:#456052;font-size:13px}
+.design-card p{margin:6px 0;font-weight:650;overflow-wrap:anywhere}
+.design-card button{margin:0 4px 4px 0;font-size:13px;min-height:34px}
 .design-card button[data-danger]{color:#80362a;background:transparent}
+.design-rename{display:grid;gap:6px;margin-top:6px}
+.design-rename input{box-sizing:border-box;width:100%;min-width:0;padding:7px;border:1px solid #cad6cb;border-radius:6px;font:inherit}
 .planning-tile{grid-column:1;padding:18px}
 .planning-tile h3{font-size:14px;margin:14px 0 4px}
 .stage-tools{position:absolute;z-index:1;top:12px;right:12px;display:flex;gap:4px;align-items:center}
@@ -134,7 +139,7 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
   <button data-view="Draufsicht">Draufsicht</button>
  </div>
  <div class="toolbar-group" role="group" aria-label="Planung"><strong>Planung</strong>
-  <button data-view="Küchenmasse">Küchenmasse</button><button id="placement" aria-pressed="false">Möbel platzieren</button>
+  <button type="button" id="open-saved-designs" aria-haspopup="dialog">Gespeicherte Designs</button><button data-view="Küchenmasse">Küchenmasse</button><button id="placement" aria-pressed="false">Möbel platzieren</button>
  </div>
 </nav>
 <div class="toolbar placement-controls" id="placement-controls" hidden>
@@ -195,11 +200,7 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
  </details>
  <input type="file" id="preset-file" accept=".json,application/json" hidden>
 </div>
-<details class="saved-designs" id="saved-designs">
- <summary>Gespeicherte Designs</summary>
- <div id="design-cards"></div>
- <p id="design-manage-status" role="status"></p>
-</details>
+
 </details>
 
 </aside>
@@ -218,6 +219,14 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
 <h3>Planungsstand</h3>
 <p>Fensterpositionen und Abmessungen nach dem markierten Grundriss, teils abgelesen. Raumhöhe 2,39 m. Vor Ausführung Aufmass, Tragwerk und Leitungen prüfen lassen.</p>
 </section>
+<dialog id="saved-designs" aria-labelledby="design-library-title">
+ <div class="design-library-header">
+  <h2 id="design-library-title">Gespeicherte Designs</h2>
+  <form method="dialog"><button type="submit" autofocus>Schliessen</button></form>
+ </div>
+ <p id="design-manage-status" role="status"></p>
+ <div id="design-cards"></div>
+</dialog>
 </main>
 <script src="Materialpreise.js?v=3"></script>
 <script src="Team-Konfiguration.js"></script>
@@ -2734,12 +2743,13 @@ function designPayload(name){
  try{
    draw();
    const preview=document.createElement('canvas');
-   preview.width=240;
-   preview.height=135;
-   const scale=Math.max(240/canvas.width,135/canvas.height);
+   preview.width=480;
+   preview.height=270;
+   const scale=Math.max(preview.width/canvas.width,preview.height/canvas.height);
    const w=canvas.width*scale,h=canvas.height*scale;
-   preview.getContext('2d').drawImage(canvas,(240-w)/2,(135-h)/2,w,h);
-   payload.thumbnail=preview.toDataURL('image/jpeg',.72);
+   preview.getContext('2d').drawImage(canvas,(preview.width-w)/2,(preview.height-h)/2,w,h);
+   const thumbnail=preview.toDataURL('image/jpeg',.68);
+   if(thumbnail.length<60000)payload.thumbnail=thumbnail;
  }catch{}
  return payload;
 }
@@ -2795,7 +2805,10 @@ function renderDesignCards(){
        content.append(button);
      }
      action('Laden',()=>loadSavedDesign(record));
-     if(record.editable)action('Löschen',()=>deleteSavedDesign(record));
+     if(record.editable){
+       action('Umbenennen',()=>showRenameForm(content,record));
+       action('Löschen',()=>deleteSavedDesign(record));
+     }
      group.append(card);
    }
  }
@@ -2809,10 +2822,71 @@ async function loadSavedDesign(record){
    preset=data.payload;
  }
  if(!preset?.selections)throw new Error('Dieses Design ist unvollständig.');
- applyConfiguration(preset);
+ applyConfiguration({...preset,name:record.title});
  setEditingDesign(record);
  presetStatus.textContent='';
- manageStatus.textContent='Design geladen.';
+ presetStatus.textContent='«'+record.title+'» geladen.';
+ designLibrary.close();
+}
+function showRenameForm(content,record){
+ const existing=content.querySelector('.design-rename input');
+ if(existing){existing.focus();return;}
+ const form=document.createElement('form');
+ form.className='design-rename';
+ const label=document.createElement('label');
+ label.className='choice';
+ label.textContent='Neuer Name';
+ const input=document.createElement('input');
+ input.maxLength=80;
+ input.required=true;
+ input.value=record.title;
+ label.append(input);
+ const actions=document.createElement('div');
+ const save=document.createElement('button');
+ save.type='submit';
+ save.textContent='Namen speichern';
+ const cancel=document.createElement('button');
+ cancel.type='button';
+ cancel.textContent='Abbrechen';
+ cancel.onclick=()=>form.remove();
+ actions.append(save,cancel);
+ form.append(label,actions);
+ content.append(form);
+ input.focus();
+ input.select();
+ form.addEventListener('submit',async event=>{
+   event.preventDefault();
+   const name=input.value.trim();
+   if(!name||name===record.title){form.remove();return;}
+   save.disabled=cancel.disabled=true;
+   try{
+     const wasOpen=editingDesign&&(record.id?editingDesign.id===record.id:!editingDesign.id&&editingDesign.title===record.title);
+     if(record.preset){
+       if(presets.has(name))throw new Error('Ein Design mit diesem Namen ist bereits auf diesem Gerät gespeichert.');
+       const preset={...record.preset,name};
+       const next=new Map(presets);
+       next.delete(record.title);
+       next.set(name,preset);
+       localStorage.setItem(presetKey,JSON.stringify([...next]));
+       presets=next;
+       if(wasOpen)setEditingDesign({...record,title:name,preset});
+     }else{
+       const client=await connectDesigns();
+       const {data,error}=await client.from('fw_entries').update({title:name})
+         .eq('id',record.id).eq('kind','design').select('id').maybeSingle();
+       if(error||!data)throw new Error('Der Name konnte nicht geändert werden. Prüfe deine Berechtigung.');
+       sharedDesigns=sharedDesigns.map(item=>item.id===record.id?{...item,title:name}:item);
+       if(wasOpen)setEditingDesign({...record,title:name});
+     }
+     if(wasOpen){
+       closeNewDesign();
+       presetName.value=name;
+     }
+     renderDesignCards();
+     manageStatus.textContent='Design umbenannt.';
+   }catch(error){manageStatus.textContent=error.message;}
+   finally{save.disabled=cancel.disabled=false;}
+ });
 }
 async function changeSavedDesign(record,overwrite){
  if(record.preset){
@@ -2862,8 +2936,14 @@ async function refreshDesigns(){
 }
 renderDesignCards();
 updatePresetSuggestion();
-document.querySelector('#saved-designs').addEventListener('toggle',event=>{
- if(event.currentTarget.open)refreshDesigns().catch(error=>{manageStatus.textContent=error.message;});
+const designLibrary=document.querySelector('#saved-designs');
+document.querySelector('#open-saved-designs').addEventListener('click',async()=>{
+ if(!designLibrary.open)designLibrary.showModal();
+ manageStatus.textContent='Designs werden geladen …';
+ try{
+   await refreshDesigns();
+   manageStatus.textContent='';
+ }catch(error){manageStatus.textContent=error.message;}
 });
 presetForm.addEventListener('submit',async event=>{
  event.preventDefault();
@@ -2922,7 +3002,6 @@ presetForm.addEventListener('submit',async event=>{
    presetName.value=name;
    setEditingDesign({id:data.id,title:name,editable:true});
    presetStatus.textContent=asCopy?'Neues Design gespeichert.':'Design gespeichert.';
-   document.querySelector('#saved-designs').open=true;
    await refreshDesigns().catch(()=>{});
  }catch(error){presetStatus.textContent=error.message;}
  finally{saveDesign.disabled=saveCopy.disabled=false;}
