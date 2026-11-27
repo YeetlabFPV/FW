@@ -20,7 +20,6 @@ nav{display:flex;flex-wrap:wrap;gap:6px;padding:10px}
 .toolbar-group{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
 .room-toolbar{width:100%}
 .view-toolbar{border-right:1px solid #e1e6de;padding-right:10px;margin-right:4px}
-.render-quality{display:inline-flex;align-items:center;gap:5px;font-size:13px}.render-quality select{font:inherit;color:inherit;border:1px solid #cad6cb;border-radius:8px;padding:6px;background:#f8faf6}
 .toolbar strong{font-size:12px;letter-spacing:.07em;text-transform:uppercase;margin-right:4px;color:#607468}
 .choices{display:grid;gap:12px;margin-bottom:16px}
 .choice-group{display:grid;gap:10px;min-width:0;margin:0;padding:8px 0 2px;border:0;border-top:1px solid #e1e6de}
@@ -63,6 +62,8 @@ canvas.placing,canvas.panning{cursor:move}
 .planning-tile{grid-column:1;padding:18px}
 .planning-tile h3{font-size:14px;margin:14px 0 4px}
 .stage-tools{position:absolute;z-index:1;top:12px;right:12px;display:flex;gap:4px;align-items:center}
+.stage-tools-left{left:12px;right:auto}
+.stage-tools-left button[data-tip]:is(:hover,:focus-visible)::after{left:0;right:auto}
 .stage.walking .stage-tools{display:none}
 .stage-tools button[data-tip]{position:relative;justify-content:center;width:38px;height:38px;padding:6px}
 .stage-tools svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:round;stroke-linecap:round}
@@ -99,7 +100,7 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
   <button data-view="Wohnung">Wohnung</button><button data-view="Küche">Küche</button><button data-view="Wohnen">Wohnen</button><button data-view="Bad">Bad</button><button data-view="Zimmer Eingang">Zimmer Eingang</button><button data-view="Schlafzimmer 1">Schlafzimmer 1</button><button data-view="Schlafzimmer 2">Schlafzimmer 2</button>
  </div>
  <div class="toolbar-group view-toolbar" role="group" aria-label="Ansicht"><strong>Ansicht</strong>
-  <button type="button" id="walk-mode" aria-pressed="false">Begehung starten</button><button data-view="Draufsicht">Draufsicht</button><button id="walls" aria-pressed="true">Wände kürzen</button><button id="full">Vollbild</button><label class="render-quality">Grafik <select id="render-quality"><option value="auto">Automatisch</option><option value="high">Maximale Details</option></select></label>
+  <button data-view="Draufsicht">Draufsicht</button>
  </div>
  <div class="toolbar-group" role="group" aria-label="Planung"><strong>Planung</strong>
   <button data-view="Küchenmasse">Küchenmasse</button><button id="placement" aria-pressed="false">Möbel platzieren</button>
@@ -119,7 +120,9 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
  </div>
  <small id="placement-message" role="status">Möbel auswählen und in der Draufsicht ziehen.</small>
 </div>
-<div class="stage"><canvas tabindex="0" aria-label="3D-Modell. Mit Pfeiltasten drehen, mit Plus und Minus zoomen. Mit Umschalt und Pfeiltasten die Ansicht verschieben."></canvas><svg id="dimensions" role="img" aria-label="Wandabstände in Zentimetern"></svg><div class="stage-tools" role="group" aria-label="Ansichtsoptionen">
+<div class="stage"><canvas tabindex="0" aria-label="3D-Modell. Mit Pfeiltasten drehen, mit Plus und Minus zoomen. Mit Umschalt und Pfeiltasten die Ansicht verschieben."></canvas><svg id="dimensions" role="img" aria-label="Wandabstände in Zentimetern"></svg><div class="stage-tools stage-tools-left" role="group" aria-label="Vollbild und Begehung"><button type="button" id="full" aria-label="Vollbild" data-tip="Vollbild"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6"/></svg></button><button type="button" id="walk-mode" aria-pressed="false" aria-label="Begehung starten" data-tip="Begehung starten"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3h.01M11 21l2-5-3-3m5 8v-5l-3-3 1-6m-6 5 3-4 3-1 3 4 3 1"/></svg></button></div>
+<div class="stage-tools" role="group" aria-label="Ansichtsoptionen">
+<button type="button" id="walls" aria-pressed="true" aria-label="Wände kürzen" data-tip="Wände kürzen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v5H3zM3 15h18v4H3zM9 5v5m6 5v4"/></svg></button>
 <button type="button" id="pan-view" aria-pressed="false" aria-label="Ansicht verschieben" data-tip="Ansicht verschieben"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v20M2 12h20M9 5l3-3 3 3M9 19l3 3 3-3M5 9l-3 3 3 3m14-6 3 3-3 3"/></svg></button>
 <button type="button" id="center-view" hidden>Zentrieren</button>
 <button type="button" id="doors" aria-pressed="false" aria-label="Türblätter ein- oder ausblenden" data-tip="Türblätter ein- oder ausblenden"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21h14M6 21V4l10-2v19m-4-9h1"/></svg></button>
@@ -183,21 +186,12 @@ function corners({x,y,z,w,d,h,pivot,angle}){
 hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255)];
 const canvas=document.querySelector('canvas');
 let walking=false;
-const qualitySelect=document.querySelector('#render-quality');
-const qualityKey='fw-grafikqualitaet';
-let highQuality=false;
-try{highQuality=localStorage.getItem(qualityKey)==='high';}catch{}
-qualitySelect.value=highQuality?'high':'auto';
-qualitySelect.addEventListener('change',()=>{
- highQuality=qualitySelect.value==='high';
- try{localStorage.setItem(qualityKey,qualitySelect.value);}catch{}
-});
+const highQuality=true;
 const gl=canvas.getContext('webgl',{antialias:true});
 if(!gl){
   document.querySelector('#status').textContent='Die 3D-Ansicht benötigt WebGL.';
 }else{
 const derivatives=gl.getExtension?.('OES_standard_derivatives');
-qualitySelect.addEventListener('change',()=>{build();draw();});
 const program=gl.createProgram();
 for(const [type,source] of [[gl.VERTEX_SHADER,`
  attribute vec3 point; attribute vec4 material;
@@ -531,8 +525,8 @@ for(const [type,source] of [[gl.VERTEX_SHADER,`
        vec2 delta=max(abs(vec2(c*p.x+s*p.y,c*p.y-s*p.x))-b.zw,0.);
        float distance=length(delta);
        float soft=1.-smoothstep(.012,detailedLight?.42:.18,distance);
-       float tight=detailedLight?.055*(1.-smoothstep(.009,.13,distance)):0.;
-       contact=max(contact,(detailedLight?.18:.15)*soft+tight);
+       float tight=detailedLight?.036*(1.-smoothstep(.009,.13,distance)):0.;
+       contact=max(contact,(detailedLight?.14:.15)*soft+tight);
      }
      grain*=1.-contact*(1.-smoothstep(.025,.20,world.z));
    }
@@ -1948,7 +1942,11 @@ const stage=canvas.closest('.stage');
 function updateFullscreenButtons(){
  const active=Boolean(document.fullscreenElement)||stage.classList.contains('expanded');
  for(const button of [fullscreenButton,walkFullscreenButton]){
-   button.textContent=active?'Vollbild verlassen':'Vollbild';
+   const label=active?'Vollbild verlassen':'Vollbild';
+   if(button===fullscreenButton){
+     button.setAttribute('aria-label',label);
+     button.dataset.tip=label;
+   }else button.textContent=label;
    button.setAttribute('aria-pressed',active);
  }
 }
@@ -2127,7 +2125,9 @@ function setWalking(active){
  }
  stopWalking();
  walkButton.setAttribute('aria-pressed',active);
- walkButton.textContent=active?'Begehung beenden':'Begehung starten';
+ const walkLabel=active?'Begehung beenden':'Begehung starten';
+ walkButton.setAttribute('aria-label',walkLabel);
+ walkButton.dataset.tip=walkLabel;
  const heading=active?'Begehung':'3D-Konfigurator';
  document.querySelector('#page-heading').textContent=heading;
  document.title=heading+' · Wohnung';
