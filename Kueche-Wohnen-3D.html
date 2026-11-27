@@ -88,6 +88,7 @@ canvas.placing,canvas.panning{cursor:move}
 .stage-tools-left{left:12px;right:auto}
 .stage-tools-left button[data-tip]:is(:hover,:focus-visible)::after{left:0;right:auto}
 .stage.walking .stage-tools{display:none}
+@media(max-width:480px){.stage-tools:not(.stage-tools-left){top:56px}}
 .stage-tools button[data-tip]{position:relative;justify-content:center;width:38px;height:38px;padding:6px}
 .stage-tools svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:round;stroke-linecap:round}
 .stage-tools button[data-tip]:is(:hover,:focus-visible)::after{content:attr(data-tip);position:absolute;top:calc(100% + 6px);right:0;z-index:2;background:#263830;color:#fff;padding:4px 8px;border-radius:5px;width:max-content;white-space:nowrap;pointer-events:none}
@@ -157,7 +158,8 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
  </div>
  <small id="placement-message" role="status">Möbel auswählen und in der Draufsicht ziehen.</small>
 </div>
-<div class="stage"><canvas tabindex="0" aria-label="3D-Modell. Mit Pfeiltasten drehen, mit Plus und Minus zoomen. Mit Umschalt und Pfeiltasten die Ansicht verschieben."></canvas><svg id="dimensions" role="img" aria-label="Wandabstände in Zentimetern"></svg><div class="stage-tools stage-tools-left" role="group" aria-label="Vollbild und Begehung"><button type="button" id="full" aria-label="Vollbild" data-tip="Vollbild"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6"/></svg></button><button type="button" id="walk-mode" aria-pressed="false" aria-label="Begehung starten" data-tip="Begehung starten"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3h.01M11 21l2-5-3-3m5 8v-5l-3-3 1-6m-6 5 3-4 3-1 3 4 3 1"/></svg></button></div>
+<div class="stage"><canvas tabindex="0" aria-label="3D-Modell. Mit Pfeiltasten drehen, mit Plus und Minus zoomen. Mit Umschalt und Pfeiltasten die Ansicht verschieben."></canvas><svg id="dimensions" role="img" aria-label="Wandabstände in Zentimetern"></svg><div class="stage-tools stage-tools-left" role="group" aria-label="Vollbild und Begehung"><button type="button" id="full" aria-label="Vollbild" data-tip="Vollbild"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6"/></svg></button><button type="button" id="walk-mode" aria-pressed="false" aria-label="Begehung starten" data-tip="Begehung starten"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3h.01M11 21l2-5-3-3m5 8v-5l-3-3 1-6m-6 5 3-4 3-1 3 4 3 1"/></svg></button><button type="button" id="quick-save-design" aria-label="Design speichern" data-tip="Design speichern"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h13l4 4v14H3V3zM7 3v6h9V3M7 21v-8h10v8"/></svg></button>
+<button type="button" id="quick-load-design" aria-label="Design laden" data-tip="Design laden"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5a1 1 0 0 1 1-1h5l2 2h8a1 1 0 0 1 1 1v2M3 7v12h16l3-10H7l-4 10"/></svg></button></div>
 <div class="stage-tools" role="group" aria-label="Ansichtsoptionen">
 <button type="button" id="walls" aria-pressed="true" aria-label="Wände kürzen" data-tip="Wände kürzen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v5H3zM3 15h18v4H3zM9 5v5m6 5v4"/></svg></button>
 <button type="button" id="pan-view" aria-pressed="false" aria-label="Ansicht verschieben" data-tip="Ansicht verschieben"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v20M2 12h20M9 5l3-3 3 3M9 19l3 3 3-3M5 9l-3 3 3 3m14-6 3 3-3 3"/></svg></button>
@@ -2717,29 +2719,35 @@ document.querySelector('#cost-link').addEventListener('click',()=>{
  try{sessionStorage.setItem('fw-kosten-konfiguration',JSON.stringify(configuration(suggestedPresetName())));}catch{}
 });
 let designClient, sharedDesigns=[], designUser, designAdmin=false;
-let editingDesign=null;
+let editingDesign=null, copyOnlyDesign=false;
 const saveDesign=document.querySelector('#save-design');
 const saveCopy=document.querySelector('#save-design-copy');
+const quickSave=document.querySelector('#quick-save-design');
 const saveTarget=document.querySelector('#design-save-target');
 const designNameField=document.querySelector('#design-name-field');
 const cancelNewDesign=document.querySelector('#cancel-new-design');
 let newDesignDraft=null;
 function setEditingDesign(record){
  editingDesign=record?.editable?record:null;
+ copyOnlyDesign=Boolean(record&&!record.editable);
  updateSaveTarget();
 }
 function updateSaveTarget(){
  saveCopy.hidden=!editingDesign||Boolean(newDesignDraft);
  designNameField.hidden=!newDesignDraft;
  cancelNewDesign.hidden=!newDesignDraft;
- saveDesign.textContent=newDesignDraft?.asCopy?'Neues Design speichern':'Design speichern';
+ saveDesign.textContent=newDesignDraft?.asCopy?'Neues Design speichern'
+   :copyOnlyDesign?'Als neues Design speichern':'Design speichern';
+ const label=copyOnlyDesign?'Als neues Design speichern':'Design speichern';
+ quickSave.setAttribute('aria-label',label);
+ quickSave.dataset.tip=label;
  saveTarget.hidden=!editingDesign||Boolean(newDesignDraft);
  saveTarget.textContent=editingDesign?'Geöffnet: '+editingDesign.title:'';
 }
 function startNewDesign(target,asCopy){
  const previousName=presetName.value;
  let name=previousName.trim()||suggestedPresetName();
- if(asCopy&&name===target?.title){
+ if(asCopy&&(name===target?.title||copyOnlyDesign)){
    const base=name.slice(0,70)+' (Kopie';
    const used=new Set([...presets.keys(),...sharedDesigns.map(record=>record.title)]);
    name=base+')';
@@ -2819,7 +2827,7 @@ function renderDesignCards(){
  for(const [title,preset] of presets)add('Meine Designs',{title,preset,preview:preset.thumbnail,editable:true});
  for(const record of sharedDesigns){
    const own=record.owner_id===designUser?.id;
-   add(own?'Meine Designs':'Designs von '+record.author,{...record,editable:own||designAdmin});
+   add(own?'Meine Designs':'Designs von '+record.author,{...record,editable:own,deletable:own||designAdmin});
  }
  if(!groups.size){designCards.textContent='Noch keine Designs gespeichert.';return;}
  for(const [label,records] of groups){
@@ -2872,10 +2880,8 @@ function renderDesignCards(){
        content.append(button);
      }
      action('Laden',()=>loadSavedDesign(record));
-     if(record.editable){
-       action('Umbenennen',()=>showRenameForm(content,record));
-       action('Löschen',()=>deleteSavedDesign(record));
-     }
+     if(record.editable)action('Umbenennen',()=>showRenameForm(content,record));
+     if(record.editable||record.deletable)action('Löschen',()=>deleteSavedDesign(record));
      group.append(card);
    }
  }
@@ -3004,13 +3010,18 @@ async function refreshDesigns(){
 renderDesignCards();
 updatePresetSuggestion();
 const designLibrary=document.querySelector('#saved-designs');
-document.querySelector('#open-saved-designs').addEventListener('click',async()=>{
+async function openSavedDesigns(){
  if(!designLibrary.open)designLibrary.showModal();
  manageStatus.textContent='Designs werden geladen …';
  try{
    await refreshDesigns();
    manageStatus.textContent='';
  }catch(error){manageStatus.textContent=error.message;}
+}
+document.querySelector('#open-saved-designs').addEventListener('click',openSavedDesigns);
+document.querySelector('#quick-load-design').addEventListener('click',openSavedDesigns);
+quickSave.addEventListener('click',()=>{
+ if(!saveDesign.disabled)presetForm.requestSubmit(saveDesign);
 });
 presetForm.addEventListener('submit',async event=>{
  event.preventDefault();
@@ -3018,7 +3029,7 @@ presetForm.addEventListener('submit',async event=>{
  const target=editingDesign;
  const copyRequested=event.submitter===saveCopy;
  if(!newDesignDraft&&(!target||copyRequested)){
-   startNewDesign(target,copyRequested);
+   startNewDesign(target,copyRequested||copyOnlyDesign);
    return;
  }
  const asCopy=Boolean(newDesignDraft?.asCopy);
@@ -3028,7 +3039,7 @@ presetForm.addEventListener('submit',async event=>{
    presetName.focus();
    return;
  }
- saveDesign.disabled=saveCopy.disabled=true;
+ saveDesign.disabled=saveCopy.disabled=quickSave.disabled=true;
  try{
    if(target&&!newDesignDraft){
      await changeSavedDesign(target,true);
@@ -3071,7 +3082,7 @@ presetForm.addEventListener('submit',async event=>{
    presetStatus.textContent=asCopy?'Neues Design gespeichert.':'Design gespeichert.';
    await refreshDesigns().catch(()=>{});
  }catch(error){presetStatus.textContent=error.message;}
- finally{saveDesign.disabled=saveCopy.disabled=false;}
+ finally{saveDesign.disabled=saveCopy.disabled=quickSave.disabled=false;}
 });
 function applyConfiguration(preset){
  closeNewDesign();
