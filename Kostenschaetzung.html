@@ -7,32 +7,61 @@
 <link rel="stylesheet" href="Projekt-Navigation.css">
 <style>
 :root{font:16px/1.5 system-ui,sans-serif;color:#263b33;background:#f4f4ee;--line:#dce4db;--green:#38584b}
-*{box-sizing:border-box}body{max-width:1250px;margin:0 auto;padding:clamp(12px,3vw,36px)}h1,h2,h3,p{margin:0}header,nav,.actions,.summary{display:flex;gap:12px;align-items:center;flex-wrap:wrap}header{justify-content:space-between;margin-bottom:18px}nav a,button{color:inherit;background:#f0f4ed;border:1px solid #cbd8cd;border-radius:8px;padding:7px 11px;text-decoration:none;font:inherit;cursor:pointer}button.primary{background:var(--green);color:white}.panel,.category{background:white;border:1px solid var(--line);border-radius:12px;padding:clamp(12px,2vw,20px);margin:12px 0}.summary{align-items:stretch}.summary>div{flex:1 1 155px}.summary strong{display:block;font-size:clamp(17px,2.4vw,28px);font-variant-numeric:tabular-nums}.total{color:var(--green)}small,.note{color:#53665c;font-size:.86rem}.panel p,.category p{margin:7px 0}.actions{margin-top:12px}.actions label{display:flex;gap:8px;align-items:center}.category summary{cursor:pointer;display:flex;align-items:baseline;justify-content:space-between;gap:12px}.category summary::before{content:'▸';color:var(--green)}.category[open] summary::before{content:'▾'}.category h2{font-size:18px;flex:1}.category output,.amount{font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}.table-scroll{overflow:auto}.estimate{width:100%;border-collapse:collapse;min-width:840px;margin-top:8px}th,td{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left;vertical-align:top}th{font-size:.81rem;color:#53665c;white-space:nowrap}th:first-child{width:36%}td label{font-weight:620}td small{display:block}td:first-child{min-width:210px}input,select{font:inherit;color:inherit;background:#fbfcfa;border:1px solid #cad6cb;border-radius:6px;padding:6px;max-width:100%}input[type=number]{width:93px;font-variant-numeric:tabular-nums}td select{width:100%;max-width:250px}td input[type=text]{width:100%}button.remove{padding:4px 8px}a{color:#2f5d4d}#save-status{min-height:1.4em;font-size:.85rem;color:#53665c}.sources{columns:2;column-width:265px}
-@media(max-width:620px){h1{font-size:1.6rem}.panel,.category{padding:12px}.summary{gap:8px}.summary>div{flex-basis:calc(50% - 8px)}.estimate{min-width:0}.estimate thead{display:none}.estimate tbody,.estimate tr,.estimate td{display:block}.estimate tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-bottom:1px solid var(--line);padding:9px 0}.estimate td{border:0;padding:3px;min-width:0;font-size:.88rem}.estimate td:first-child{grid-column:1/-1}.estimate td:nth-child(2){grid-column:1/-1}.estimate td[data-label]::before{content:attr(data-label);display:block;font-size:.72rem;color:#53665c}.estimate td input[type=number]{width:100%}.estimate td.amount{grid-column:1/-1}}
+*{box-sizing:border-box}body{max-width:1250px;margin:0 auto;padding:clamp(12px,3vw,36px)}h1,h2,h3,p{margin:0}header,nav,.actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}header{justify-content:space-between;margin-bottom:18px}nav a,button{color:inherit;background:#f0f4ed;border:1px solid #cbd8cd;border-radius:8px;padding:7px 11px;text-decoration:none;font:inherit;cursor:pointer}button.primary{background:var(--green);color:white}.panel,.category{background:white;border:1px solid var(--line);border-radius:12px;padding:clamp(12px,2vw,20px);margin:12px 0}small,.note{color:#53665c;font-size:.86rem}.panel p,.category p{margin:7px 0}.actions{margin-top:12px}.actions label{display:flex;gap:8px;align-items:center}.category summary{cursor:pointer;display:flex;align-items:baseline;justify-content:space-between;gap:12px}.category summary::before{content:'▸';color:var(--green)}.category[open] summary::before{content:'▾'}.category h2{font-size:18px;flex:1}.category output,.amount{font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}.table-scroll{overflow:auto}.estimate{width:100%;border-collapse:collapse;min-width:840px;margin-top:8px}th,td{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left;vertical-align:top}th{font-size:.81rem;color:#53665c;white-space:nowrap}th:first-child{width:36%}td label{font-weight:620}td small{display:block}td:first-child{min-width:210px}input,select{font:inherit;color:inherit;background:#fbfcfa;border:1px solid #cad6cb;border-radius:6px;padding:6px;max-width:100%}input[type=number]{width:93px;font-variant-numeric:tabular-nums}td select{width:100%;max-width:250px}td input[type=text]{width:100%}button.remove{padding:4px 8px}a{color:#2f5d4d}#save-status{min-height:1.4em;font-size:.85rem;color:#53665c}.sources{columns:2;column-width:265px}
+@media(max-width:620px){h1{font-size:1.6rem}.panel,.category{padding:12px}.estimate{min-width:0}.estimate thead{display:none}.estimate tbody,.estimate tr,.estimate td{display:block}.estimate tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-bottom:1px solid var(--line);padding:9px 0}.estimate td{border:0;padding:3px;min-width:0;font-size:.88rem}.estimate td:first-child{grid-column:1/-1}.estimate td:nth-child(2){grid-column:1/-1}.estimate td[data-label]::before{content:attr(data-label);display:block;font-size:.72rem;color:#53665c}.estimate td input[type=number]{width:100%}.estimate td.amount{grid-column:1/-1}}
+.budget-headline{display:grid;grid-template-columns:1.35fr 1fr;border:1px solid #cedbd0;border-radius:10px;background:#eef4ed}
+.budget-headline>div{padding:clamp(12px,2.4vw,26px);min-width:0}
+.budget-headline>div+div{border-left:1px solid #cedbd0}
+.budget-headline h2{font-size:1rem;font-weight:650}
+.budget-headline strong{display:block;margin:.24rem 0;font-size:clamp(1.55rem,3.3vw,2.35rem);line-height:1.2;color:#2b4f40;font-variant-numeric:tabular-nums;white-space:nowrap}
+.panel .budget-headline p{margin:0;color:#53665c;font-size:.86rem}
+.budget-breakdown{display:grid;margin:0 0 .65rem}
+.budget-breakdown div{display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:.3rem 1.2rem;padding:.55rem 0;border-bottom:1px solid var(--line)}
+.budget-breakdown dt{font-weight:600}
+.budget-breakdown dd{margin:0;text-align:right;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.budget-breakdown dd.muted{font-weight:400;color:#53665c}
+.budget-subtitle{font-size:1rem;margin-top:1rem}
+@media(max-width:650px){
+ .budget-headline{grid-template-columns:1fr}
+ .budget-headline>div+div{border-left:0;border-top:1px solid #cedbd0}
+ .budget-breakdown div{gap:.25rem .75rem}
+ .budget-breakdown dd{font-size:.87rem}
+}
 .question-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(245px,100%),1fr));gap:.85rem;margin-top:12px}.question-grid label{display:grid;gap:4px}.question-grid select{width:100%}.question-grid [hidden]{display:none}
 #cost-gaps{margin:.55rem 0 0;padding-left:1.6rem}#cost-gaps li+li{margin-top:.36rem}#cost-gaps button{display:inline-flex;gap:.35rem .75rem;flex-wrap:wrap;text-align:left;align-items:baseline;padding:.35rem .65rem}#cost-gaps button small{white-space:nowrap}
 #bundle-dialog{max-width:min(95vw,580px);width:100%;max-height:85dvh;overflow:auto;border:1px solid var(--line);border-radius:12px;color:inherit;padding:18px}#bundle-dialog::backdrop{background:#1d30275d}#bundle-form>label,#bundle-positions label{display:block;margin:.35rem 0}#bundle-form fieldset{border:1px solid var(--line);border-radius:7px;margin-top:12px}#bundle-positions{max-height:31dvh;overflow:auto}
 </style>
 <script type="application/json" id="estimate-defaults">{"wardrobeWidths":{"main":"100","second":"100","entry":"200"},"furniture":{"removed":["fold-entry","night-left"],"added":[["extra-96be8547-8041-4cfe-aef6-cf3bec682727","night-left"]]},"selections":{"floor":"slate","kitchen":"#b4c4d9","bath":"#a8bbc4","bathWalls":"#ffffff","bathWall":"#c0cfbb","sideboard":"#b7abc7","sofa":"#9baeba","builtins":"#939e95","linoleum":"#d6c9ae","worktop":"current","showerFinish":"blue","sideWallFinish":"paint","showerGlass":"clear","linoFinish":"fine","kitchenHandle":"#d8b58d","bathHandle":"#798589","builtinsHandle":"wood","chairStyle":"shell","coffeeStyle":"wood","foldBed":"closed","parquet":"laengs","bath-tile":"neu"}}</script>
 <script src="Materialpreise.js?v=gr-20261127" defer></script>
-<script src="Kostenschaetzung.js?v=gr-20261127" defer></script>
+<script src="Kostenschaetzung.js?v=budget-20261127" defer></script>
 </head>
 <body>
 <nav class="project-nav" aria-label="Seitennavigation"><a href="index.html" data-project="start">Startseite</a> <a href="Wohnen-und-Bad-360.html" data-project="blender">Blender-Ansichten (360°)</a> <a href="Kueche-Wohnen-3D.html" data-project="model">3D-Konfigurator</a> <a href="Kueche-Wohnen-3D.html?modus=begehen" data-project="walk">Begehung</a> <a href="Kostenschaetzung.html" data-project="cost" aria-current="page">Kostenschätzung</a></nav>
 <header><h1>Kostenschätzung</h1></header>
 <main>
 <section class="panel" aria-label="Budgetübersicht">
-<div class="summary">
-<div><small>Offertierte Beträge</small><strong id="quoted-total"></strong></div>
-<div><small>Offene Richtwerte</small><strong id="open-total"></strong></div>
-<div><small>Planung &amp; Bauleitung</small><strong id="planning-total"></strong></div>
-<div><small>Reserve</small><strong id="reserve-total"></strong></div>
-<div class="total"><small>Gesamtbudget in CHF</small><strong id="grand-total"></strong></div>
-<div class="total"><small>Planungswert</small><strong id="budget-target"></strong></div>
+<div class="budget-headline">
+<div>
+<h2>Geschätztes Gesamtbudget</h2>
+<strong id="grand-total"></strong>
+<p>Mit Planung, Reserve und MwSt.</p>
 </div>
-<p class="note">Preisstand November 2026, inkl. MwSt. Ansatz für Chur und einen gut erreichbaren Standort in Graubünden. Mengen aus dem Modell vor Ort prüfen. Der Planungswert ist die auf CHF 1’000 gerundete Mitte der Gesamtspanne.</p>
-<p class="note">Kochfeld und Abzug folgen der Auswahl im 3D-Konfigurator. Kombigeräte werden beim Kochfeld einmal berechnet. Geräteansätze enthalten vorgesehenes Filter- oder Kanalzubehör. Elektroanschlüsse laufen separat.</p>
-<details class="note"><summary>Preisbeispiele zur Material- und Geräteauswahl</summary>
+<div>
+<h2>Planungswert</h2>
+<strong id="budget-target"></strong>
+<p>Gerundete Mitte der Budgetspanne.</p>
+</div>
+</div>
+<h2 class="budget-subtitle">So setzt sich das Budget zusammen</h2>
+<dl class="budget-breakdown">
+<div><dt>Erfasste Offerten</dt><dd id="quoted-total"></dd></div>
+<div><dt>Geschätzte Kosten ohne Offerte</dt><dd id="open-total"></dd></div>
+<div><dt>Planung und Bauleitung</dt><dd id="planning-total"></dd></div>
+<div><dt>Reserve für Unvorhergesehenes</dt><dd id="reserve-total"></dd></div>
+</dl>
+<p class="note">Richtpreise für einen gut erreichbaren Standort in Graubünden · Stand November 2026.</p>
+<details class="note"><summary>Grundlagen und Preisbeispiele</summary>
+<p>Die Mengen stammen aus dem Modell und sind vor Ort zu prüfen. Bei Kochfeldern mit integriertem Abzug sind Gerät und Abzug zusammen eingerechnet. Elektroanschlüsse sind separat aufgeführt.</p>
 <ul>
 <li><a href="https://hma-interior.ch/ratgeber/kuechenarbeitsplatte-material-vergleich">HMA Interior · Arbeitsplatten nach Material</a> und <a href="https://www.ikea.com/ch/de/p/ekbacken-arbeitsplatte-graubeige-steinmuster-laminat-20604320/">IKEA · Laminat mit Steinmuster</a></li>
 <li><a href="https://ttbischoff.ch/fliesenarbeiten/">T&amp;T Bischoff · Verlegung und Untergrund</a> und <a href="https://www.hornbach.ch/de/c/bodenbelaege-fliesen/fliesen/bodenfliesen/fliesen-in-terrazzooptik/S30900/">Hornbach · Materialpreise als Vergleich für Terrazzooptik</a></li>

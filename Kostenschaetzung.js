@@ -374,14 +374,17 @@ const factor=(pair,ratio)=>pair.map(value=>value*ratio);
 const range=pair=>pair[0]===pair[1]?nf.format(pair[0]):pair.map(value=>nf.format(value)).join(' – ');
 const budgetTarget=([low,high])=>low===high?low:Math.round((low+high)/2000)*1000;
 function calculateBudget(){
-  let quoteTotal=0,open=[0,0],planningBasis=[0,0];
+  let quoteTotal=0,quoteCount=0,open=[0,0],planningBasis=[0,0];
   const gaps=[];
   for(const [id,section] of sections){
     let total=[0,0];
     for(const row of section.rows){
       const settings=rowSettings(row), values=amounts(row,settings);
       total=plus(total,values);
-      if(settings.active&&settings.quote!=null)quoteTotal+=settings.quote;
+      if(settings.active&&settings.quote!=null){
+        quoteTotal+=settings.quote;
+        quoteCount++;
+      }
       else open=plus(open,values);
       if(values[1]>values[0])gaps.push({row,values,width:values[1]-values[0]});
     }
@@ -390,20 +393,28 @@ function calculateBudget(){
   const sum=plus([quoteTotal,quoteTotal],open);
   const planning=factor(planningBasis,validNumber(state.planning)/100);
   const reserve=factor(plus(sum,planning),validNumber(state.reserve)/100);
-  return {quoteTotal,open,planning,reserve,grand:plus(plus(sum,planning),reserve),gaps};
+  return {quoteTotal,quoteCount,open,planning,reserve,grand:plus(plus(sum,planning),reserve),gaps};
 }
+const wholeFrancs=new Intl.NumberFormat('de-CH',{maximumFractionDigits:0});
+const summaryMoney=([low,high])=> {
+  const a=wholeFrancs.format(low), b=wholeFrancs.format(high);
+  return (a===b?a:a+'–'+b)+' CHF';
+};
 function totals(){
-  const {quoteTotal,open,planning,reserve,grand,gaps}=calculateBudget();
+  const {quoteTotal,quoteCount,open,planning,reserve,grand,gaps}=calculateBudget();
   for(const section of sections.values()){
     section.total.textContent=range(section.rows.map(row=>amounts(row)).reduce(plus,[0,0]))+' CHF';
     for(const row of section.rows)currentRows.get(row.id).textContent=range(amounts(row));
   }
-  $('quoted-total').textContent=nf.format(quoteTotal)+' CHF';
-  $('open-total').textContent=range(open)+' CHF';
-  $('planning-total').textContent=range(planning);
-  $('reserve-total').textContent=range(reserve);
-  $('grand-total').textContent=range(grand);
-  $('budget-target').textContent=nf.format(budgetTarget(grand))+' CHF';
+  const quoted=$('quoted-total');
+  quoted.textContent=quoteCount?summaryMoney([quoteTotal,quoteTotal]):'Noch keine';
+  quoted.classList.toggle('muted',!quoteCount);
+  $('open-total').textContent=summaryMoney(open);
+  $('planning-total').textContent=summaryMoney(planning);
+  $('reserve-total').textContent=summaryMoney(reserve);
+  const roundHeadline=grand[0]!==grand[1]&&grand[1]-grand[0]>=1000;
+  $('grand-total').textContent=roundHeadline?'ca. '+summaryMoney(grand.map(value=>Math.round(value/1000)*1000)):summaryMoney(grand);
+  $('budget-target').textContent=summaryMoney([budgetTarget(grand),budgetTarget(grand)]);
   $('cost-gaps').replaceChildren(...gaps.sort((a,b)=>b.width-a.width).slice(0,6).map(({row,values,width})=>{
     const item=element('li'),button=element('button',row.name);
     button.type='button';
