@@ -2264,7 +2264,7 @@ const palettes={
  sectional:{label:'Ecksofa',keys:['EcksofaTextil'],values:seatingColors},
  armchair:{label:'Drehsessel',keys:['SesselTextil'],values:seatingColors},
  builtins:{label:'Einbauschränke',keys:['Einbau'],values:{'Salbei':'#939e95','Nebelblau':'#a8b9bf','Flieder':'#b8b2c7','Sand':'#d2c6b5','Creme':'#e0ded3','Puderrosa':'#d2bdba'}},
- linoleum:{label:'Linoleum Küche',description:'Sichtbar bei Küchenboden «Linoleum».',keys:['Linoleum'],values:{'Warmgrau':'#b7b5a9','Salbei':'#aab8a4','Sand':'#d6c9ae','Terrakotta hell':'#c9a69a','Taubenblau':'#a9b9be','Anthrazit':'#686c6b','Nebel-Salbei':'#b3bbaf','Kreidebeige':'#d3c9b9','Schiefergrau':'#777e82','Steingrau':'#9d9c93'}}
+ linoleum:{label:'Linoleumfarbe',keys:['Linoleum'],values:{'Warmgrau':'#b7b5a9','Salbei':'#aab8a4','Sand':'#d6c9ae','Terrakotta hell':'#c9a69a','Taubenblau':'#a9b9be','Anthrazit':'#686c6b','Nebel-Salbei':'#b3bbaf','Kreidebeige':'#d3c9b9','Schiefergrau':'#777e82','Steingrau':'#9d9c93'}}
 };
 const choiceRoot=document.querySelector('#choices');
 const choiceGroups=new Map();
@@ -2371,6 +2371,16 @@ function herringboneSample(){
 }
 const herringbonePreview=herringboneSample();
 function refreshMaterialSamples(){
+ const availability={
+   linoleum:floor==='linoleum',
+   linoFinish:floor==='linoleum',
+   bathWall:['paint','coated'].includes(showerFinish),
+   bathWalls:['paint','coated','mineral'].includes(sideWallFinish)
+ };
+ for(const [id,visible] of Object.entries(availability)){
+   const control=materialControls.get(id);
+   if(control)control.select.closest('label').hidden=!visible;
+ }
  for(const [id,sample] of materialPreviews){
    const select=materialControls.get(id).select;
    const value=id==='worktop'&&select.value==='quartz'?quartzFinish:select.value;
@@ -2511,7 +2521,7 @@ function updateDishwasherLocation(){
    :'Geschirrspüler: in der Wandzeile direkt neben dem Kühlschrank. Die beiden sichtbaren Fronten gehören zu einer Gerätetür.';
 }
 updateDishwasherLocation();
-chooser('worktop','Arbeitsplatte',{'Stein':'current','Kunststein · Quarzkomposit':'quartz','Steinoptik · Laminat':'stoneLaminate','Terrazzo':'terrazzo','Schwarzer Stein':'black','Weisser Stein':'white','Eichenoptik':'oak','Betonoptik':'concrete','Travertinoptik':'travertine','Marmoroptik':'marble'},worktop,(value,redraw)=>{
+chooser('worktop','Arbeitsplatte',{'Stein':'current','Kunststein · Quarzkomposit':'quartz','Steinoptik · Laminat':'stoneLaminate','Terrazzo · Kunststein':'terrazzo','Schwarzer Granit':'black','Weiss · Quarzkomposit':'white','Eichenoptik':'oak','Betonoptik · Laminat':'concrete','Travertinoptik · Keramik':'travertine','Marmoroptik · Quarzkomposit':'marble'},worktop,(value,redraw)=>{
  worktop=value;
  const finish=document.getElementById('quartzFinish');
  if(finish)finish.closest('label').hidden=value!=='quartz';
@@ -2525,11 +2535,11 @@ quartzSelect.closest('label').hidden=worktop!=='quartz';
 chooser('showerFinish','Belag der Duschrückwand',{...wallFinishOptions,'Kalksteinoptik':'limestone'},showerFinish,(value,redraw)=>{
  showerFinish=value;
  if(redraw){build();draw();}
-},'Die Wandfarbe gilt für «Einfarbig» und «Bestandsplättli angemalt».');
+});
 chooser('sideWallFinish','Belag der Seitenwände',{...wallFinishOptions,'Mineralputz':'mineral'},sideWallFinish,(value,redraw)=>{
  sideWallFinish=value;
  if(redraw){build();draw();}
-},'Die Wandfarbe gilt für «Einfarbig», «Mineralputz» und «Bestandsplättli angemalt».');
+});
 chooser('showerGlass','Duschglas',{'Klarglas':'clear','Riffelglas':'reeded'},showerGlass,(value,redraw)=>{
  showerGlass=value;
  if(redraw){build();draw();}
