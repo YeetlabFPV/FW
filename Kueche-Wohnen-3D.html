@@ -2492,15 +2492,25 @@ for(const [id,config] of Object.entries(palettes)){
    if(redraw){build();draw();}
  },config.description);
 }
-chooser('cookingSetup','Kochfeld und Dunstabzug',{
+const cookingSelect=chooser('cookingSetup','Kochfeld und Dunstabzug',{
  'V-ZUG · Umluft, Backofen in der Wandzeile':'integrated',
  'BORA S Pure · Backofen in der Wandzeile':'boraWallOven',
  'Glaskeramik · hängende Umluft-Inselhaube':'ceramicIsland',
  'Glaskeramik · Wandzeile mit Einbauabzug':'ceramicWall'
 },cookingSetup,(value,redraw)=>{
  cookingSetup=value;
+ if(redraw)updateDishwasherLocation();
  if(redraw){build();draw();}
 });
+const dishwasherLocation=document.createElement('small');
+dishwasherLocation.setAttribute('aria-live','polite');
+cookingSelect.closest('label').append(dishwasherLocation);
+function updateDishwasherLocation(){
+ dishwasherLocation.textContent=cookingSetup==='ceramicWall'
+   ?'Geschirrspüler: in der Halbinsel direkt neben der Spüle. Die beiden sichtbaren Fronten gehören zu einer Gerätetür.'
+   :'Geschirrspüler: in der Wandzeile direkt neben dem Kühlschrank. Die beiden sichtbaren Fronten gehören zu einer Gerätetür.';
+}
+updateDishwasherLocation();
 chooser('worktop','Arbeitsplatte',{'Stein':'current','Kunststein · Quarzkomposit':'quartz','Steinoptik · Laminat':'stoneLaminate','Terrazzo':'terrazzo','Schwarzer Stein':'black','Weisser Stein':'white','Eichenoptik':'oak','Betonoptik':'concrete','Travertinoptik':'travertine','Marmoroptik':'marble'},worktop,(value,redraw)=>{
  worktop=value;
  const finish=document.getElementById('quartzFinish');
