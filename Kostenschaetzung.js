@@ -4,8 +4,12 @@ const sources = {
   sia: ['SIA 112 · Modell Bauplanung', 'https://shop.sia.ch/067941e9-9161-4e0f-9b98-c6a1f1d42a7d/D/DownloadAnhang'],
   sia102: ['SIA · Normenwerk mit SIA 102', 'https://cms.sia.ch/sites/default/files/2024-05/Inhaltsverzeichnis_Normenwerk.pdf'],
   crb: ['CRB · eBKP-H (SN 506 511)', 'https://www.crb.ch/de/normen-standards/baukostenplane/baukostenplan-hochbau-ebkp-h'],
-  kitchen: ['Steinmark · Schweizer Richtwerte für Küchenumbau', 'https://steinmark.ch/kueche-umbauen-kosten/'],
-  stone: ['Le Bau · Schweizer Arbeitsplattenpreise nach Material', 'https://www.lebau.ch/de/kueche/kuechenabdeckung-materialien-und-preis/'],
+  kitchen: ['HMA Interior · Küchenbau in Graubünden, Anbieter-Richtwert', 'https://hma-interior.ch/regionen/graubuenden'],
+  regionalLabour: ['Elementum Group Chur · Regieansatz Ausbau 2026', 'https://elementum-group.ch/wp-content/uploads/2026/04/EG_AGB_2026-1.pdf'],
+  parquetInstall: ['HORNBACH Schweiz · Verlegepreise für Parkett', 'https://cdn.hornbach.ch/cmsm/ch/de-ch/parkett.pdf'],
+  parquetMaterial: ['HORNBACH Schweiz · Produktpreise für Eichenparkett', 'https://www.hornbach.ch/de/c/bodenbelaege-fliesen/parkett/S5637/'],
+  bathBuild: ['Bodin Bau · Vergleichspreise für Badumbau nach Gewerk', 'https://www.bodin-bau.swiss/ratgeber/badumbau-kosten/'],
+  stone: ['HMA Interior · Arbeitsplatten inkl. Standardmontage', 'https://hma-interior.ch/ratgeber/kuechenarbeitsplatte-austauschen'],
   trades: ['T&T Bischoff · Einheitspreise für Ausbauarbeiten', 'https://ttbischoff.ch/preise/'],
   labour: ['Le Bau · Schweizer Richtpreise nach Gewerk', 'https://www.lebau.ch/de/alle-preise/'],
   bath: ['suissetec · BadPlaner und Elementkalkulation Sanitär', 'https://suissetec.ch/de/digitaler-verkaufskanal-badplaner.html'],
@@ -51,11 +55,14 @@ const surfaces = {
 };
 
 const rows = [
-  rate('k-demo','kitchen','Rückbau und Entsorgung Küche',1,'Pausch.',{standard:product('Küche demontieren',600,1500)},'labour'),
+  rate('k-demo','kitchen','Rückbau und Entsorgung Küche',1,'Pausch.',{standard:product('Küche demontieren',750,1150)},'regionalLabour'),
+  rate('k-wall','kitchen','Küche öffnen und alte Türöffnung schliessen',1,'Pausch.',{
+    standard:product('Nichttragende Trennwand und Türverschluss',2400,3600)
+  },'regionalLabour','Ansatz für Schutz, Rückbau, Entsorgung, Verschluss der früheren Küchentür und lokale Anschlussarbeiten. Tragwerk und Schadstoffe bleiben separat. Flächenanstrich unter Malerarbeiten.'),
   rate('k-cabinets','kitchen','Küchenmöbel, Fronten, Beschläge und Montage',1,'Pausch.',{
-    standard:product('Systemküche, zwei Zeilen',6400,11500),
-    bespoke:product('Schreinerküche nach Mass',12500,23500)
-  },'ikea','Budgetansatz für ca. 4,3 m Plattenlänge plus Hoch- und Oberschränke. Geräte, Abdeckung und Anschlüsse separat.'),
+    standard:product('Systemküche, zwei Zeilen',8000,10500),
+    bespoke:product('Schreinerküche nach Mass',13500,17900)
+  },'kitchen','Budgetansatz für ca. 4,3 m Plattenlänge plus Hoch- und Oberschränke. Platten, Geräte und Anschlüsse separat. Schrankbreiten und Frontaufteilung entsprechen dem Entwurf, der Ansatz enthält übliche Lieferung und Montage.'),
   rate('k-top','kitchen','Arbeitsplatte inkl. Kanten, üblichem Aufmass und Montage',4.29,'lfm',{
     current:product('Steinoptik · neuer Naturstein',700,1400),
     marquina:product('Marquina · Richtwert Naturstein',700,1100),
@@ -82,21 +89,21 @@ const rows = [
     retained:retain
   },'trades','Bruttofläche 3,01 × 2,47 m. Für Linoleum sind Farbe, Feinstruktur und Verlegemuster im selben Richtpreis angesetzt.'),
   rate('k-splash','kitchen','Küchenrückwand',2.5,'m²',{
-    tile:product('Platten inkl. Verlegung',180,360),
-    glass:product('Glas nach Mass',260,575),
-    paint:product('Abwaschbarer Anstrich',35,75),
+    tile:product('Platten inkl. Verlegung',180,250),
+    glass:product('Glas nach Mass',280,425),
+    paint:product('Abwaschbarer Anstrich',40,65),
     retained:retain
   },'labour'),
-  rate('k-sink','kitchen','Spüle und Küchenarmatur',1,'Set',{standard:product('Standard inkl. Lieferung',420,1050),premium:product('Gehobene Ausführung',900,1900)},'ikea'),
-  rate('k-water','kitchen','Wasser- und Abwasseranschluss Küche',1,'Pausch.',{standard:product('Bestehende Anschlusspunkte nutzen',800,2400),move:product('Anschlüsse versetzen',2000,4600)},'labour'),
-  rate('k-power','kitchen','Elektroanschlüsse für die Küche',1,'Pausch.',{standard:product('Geräteanschlüsse und Steckdosen',950,2600)},'labour','Deckenbeleuchtung separat.'),
+  rate('k-sink','kitchen','Spüle und Küchenarmatur',1,'Set',{standard:product('Standard inkl. Lieferung',480,750),premium:product('Gehobene Ausführung',950,1450)},'ikea'),
+  rate('k-water','kitchen','Wasser- und Abwasseranschluss Küche',1,'Pausch.',{short:product('Kurze neue Leitungsführung zur Halbinsel',1600,2500),standard:product('Bestehende Anschlusspunkte nutzen',850,1350),move:product('Aufwendige Leitungsführung mit Öffnen des Bodens',2800,4200)},'labour','Für den Entwurf ist eine kurze Leitungsführung angenommen. Gefälle und Leitungsweg beim Aufmass klären.'),
+  rate('k-power','kitchen','Elektroanschlüsse für die Küche',1,'Pausch.',{standard:product('Geräteanschlüsse und Steckdosen',1350,2100)},'labour','Deckenbeleuchtung separat.'),
   rate('k-hob','kitchen','Kochfeld',1,'Stk.',{standard:product('Standard',350,750),premium:product('Premium',1150,2550),retained:retain},'appliances'),
   rate('k-oven','kitchen','Backofen',1,'Stk.',{standard:product('Standard',450,900),premium:product('Premium',1800,3200),retained:retain},'premium'),
   rate('k-dishwasher','kitchen','Geschirrspüler, integriert',1,'Stk.',{standard:product('Standard',550,950),premium:product('Premium',1500,2900),retained:retain},'appliances'),
-  rate('k-fridge','kitchen','Kühl-Gefrierkombination, integriert',1,'Stk.',{standard:product('Standard',650,1300),premium:product('Premium',1450,3000),retained:retain},'appliances'),
+  rate('k-fridge','kitchen','Kühl-Gefrierkombination, integriert',1,'Stk.',{standard:product('Standard',800,1150),premium:product('Premium',1600,2350),retained:retain},'appliances'),
   rate('k-hood','kitchen','Dunstabzug',1,'Stk.',{standard:product('Standard',300,850),premium:product('Premium',1050,2300),retained:retain},'appliances'),
-  rate('b-demo','bath','Rückbau Bad und Entsorgung',1,'Pausch.',{standard:product('Alte Sanitärobjekte und Oberflächen',950,2800),partial:product('Nur auszutauschende Objekte',450,1200)},'labour','Bei Überstreichen oder Teilumbau Umfang separat anpassen.'),
-  rate('b-water','bath','Sanitärleitungen und Anschlüsse',1,'Pausch.',{standard:product('Anpassungen im Bad',1750,4300),partial:product('Anschlüsse weitgehend behalten',700,1750)},'bath','Leitungen und Anschlussarbeiten, Sanitärobjekte separat.'),
+  rate('b-demo','bath','Rückbau Bad und Entsorgung',1,'Pausch.',{standard:product('Sanitärobjekte sowie Beläge in den erneuerten Zonen',1250,1850),partial:product('Nur auszutauschende Objekte',550,950)},'bathBuild','Bei Überstreichen oder Teilumbau Umfang separat anpassen.'),
+  rate('b-water','bath','Sanitärleitungen und Anschlüsse',1,'Pausch.',{standard:product('Anschlüsse und Fallstrang bleiben in der Nähe',2100,3100),partial:product('Anschlüsse weitgehend behalten',1050,1650),move:product('Anschlüsse über längere Strecke versetzen',3200,4600)},'bath','Für den Entwurf ist die Dusche am bisherigen Ort vorgesehen. Leitungen und Anschlüsse separat von Armaturen, Apparaten und Punktablauf bzw. Rinne.'),
   rate('b-floor','bath','Badboden ausserhalb des Duschplatzes',3.03,'m²',{
     marquina:product('Marquina · Richtwert Naturstein',155,225),
     neu:product('Neue Standardfliesen',120,225),bestand:retain,
@@ -115,34 +122,34 @@ const rows = [
   rate('b-back','bath','Duschrückwand',3.39,'m²',{...surfaces,paint:product('Fugenlose Nassraumoberfläche',135,245)},'trades','1,42 × 2,39 m. Abdichtung separat. Plättlilack nur bei dafür freigegebenem System.'),
   rate('b-seal','bath','Verbundabdichtung direkt in der Nasszone',5,'m²',{standard:product('Mit Dichtbändern und Manschetten',65,110)},'labour'),
   rate('b-shower','bath','Bodengleiche Dusche mit Gefälle, Ablauf und Belag',1,'Pausch.',{
-    standard:product('Gefälle und Standardbelag, inkl. Rinne',1750,3800),
-    tray:product('Flache Duschwanne und Ablauf',1250,3100),
-    seamless:product('Gefälle und fugenloser Belag, inkl. Rinne',1750,3800)
+    standard:product('Gefälle und Standardbelag, inkl. Rinne',2200,3000),
+    tray:product('Flache Duschwanne und Ablauf',1550,2350),
+    seamless:product('Gefälle und fugenloser Belag, inkl. Rinne',2200,3000)
   },'labour','Zusätzlich zu Glas, Armatur und Verbundabdichtung.'),
   rate('b-glass','bath','Walk-in-Duschglas inkl. Montageteilen',1,'Stk.',{
     clear:product('Klarglas',650,1600),reeded:product('Riffelglas · ESG nach Mass',1100,2450)
   },'labour','Riffelglas als Zuschlagsschätzung für Strukturglas nach Mass.'),
-  rate('b-tap','bath','Duscharmatur und Brause',1,'Set',{standard:product('Standard',300,850),premium:product('Thermostat und Regendusche',650,1700)},'bath'),
-  rate('b-wc','bath','WC mit Spülkasten / Betätigungsplatte',1,'Set',{standard:product('Wand-WC, Standard',750,1750),premium:product('Gehoben',1250,2350)},'bath'),
-  rate('b-basin','bath','Lavabo, Ablauf und Armatur',1,'Set',{standard:product('Keramik mit Standardarmatur',500,1250),premium:product('Gehoben',900,2100)},'bath'),
-  rate('b-cabinet','bath','Kleiner Waschtischunterschrank',1,'Stk.',{standard:product('Standard 60 cm',370,950),bespoke:product('Massanfertigung',950,2200)},'bath'),
-  rate('b-mirror','bath','Spiegel und Badzubehör',1,'Set',{standard:product('Spiegel, Halter, Kleinmaterial',220,650),lit:product('LED-Spiegel und Zubehör',450,1250)},'bath'),
-  rate('b-elec','bath','Elektro im Bad',1,'Pausch.',{standard:product('Anschlüsse, Schalter und Schutz',450,1200)},'labour','Deckenspots separat.'),
+  rate('b-tap','bath','Duscharmatur und Brause',1,'Set',{standard:product('Standard',350,650),premium:product('Thermostat und Regendusche',650,1700)},'bath'),
+  rate('b-wc','bath','WC mit Spülkasten / Betätigungsplatte',1,'Set',{standard:product('Wand-WC, Standard',950,1450),premium:product('Gehoben',1250,2350)},'bath'),
+  rate('b-basin','bath','Lavabo, Ablauf und Armatur',1,'Set',{standard:product('Keramik mit Standardarmatur',600,950),premium:product('Gehoben',900,2100)},'bath'),
+  rate('b-cabinet','bath','Kleiner Waschtischunterschrank',1,'Stk.',{standard:product('Standard 60 cm',480,800),bespoke:product('Massanfertigung',950,2200)},'bath'),
+  rate('b-mirror','bath','Spiegel und Badzubehör',1,'Set',{standard:product('Spiegel, Halter, Kleinmaterial',280,500),lit:product('LED-Spiegel und Zubehör',480,800)},'bath'),
+  rate('b-elec','bath','Elektro im Bad',1,'Pausch.',{standard:product('Anschlüsse, Schalter und Schutz',650,950)},'labour','Deckenspots separat.'),
   rate('i-parquet','interior','Parkett ausserhalb von Küche und Bad',0,'m²',{
-    cross:product('Eiche · quer verlegt',110,185),long:product('Eiche · längs verlegt',110,190),
+    cross:product('Eiche · quer verlegt',105,135),long:product('Eiche · längs verlegt',105,135),
     sand:product('Bestand schleifen und versiegeln',38,68),retained:retain
-  },'trades','Nettofläche aus dem 3D-Grundriss, ohne Küche, Bad und Wandflächen. Verschnitt separat berücksichtigen.'),
+  },'parquetInstall','Nettofläche aus dem 3D-Grundriss, ohne Küche, Bad und Wandflächen. Mehrschicht-Eiche matt, ortsüblicher Verlegeaufwand, normaler Verschnitt und Standard-Sockel im Ansatz. Altbelag und aufwendiger Untergrund separat.'),
   rate('i-paint','interior','Wohnung neu streichen',150,'m²',{
-    standard:product('Innenwände und geeignete Decken, zwei Anstriche',14,27),
-    repair:product('Mit zusätzlichem Spachtelaufwand',24,45)
+    standard:product('Innenwände und geeignete Decken, zwei Anstriche',16,22),
+    repair:product('Mit zusätzlichem Spachtelaufwand',26,38)
   },'trades','Editierbare Mengenannahme für Anstrichflächen ausserhalb separat kalkulierter Badflächen. Sichtbare Holzdecken belassen.'),
   rate('i-builtins','interior','Zwei raumhohe Einbauschränke',2,'Stk.',{
-    none:product('Grifflos',1500,3400),wood:product('Sperrholzgriffe',1550,3550),bore:product('Griffbohrungen',1550,3600)
-  },'labour','Budgetansatz pro Einbau nach Mass, inkl. üblicher Montage. Lose Schränke separat.'),
+    none:product('Grifflos',1950,2550),wood:product('Sperrholzgriffe',2000,2650),bore:product('Griffbohrungen',2000,2700)
+  },'regionalLabour','Budgetansatz pro Einbau nach Mass, inkl. üblicher Montage. Lose Schränke separat.'),
   rate('e-spots','electric','Neue LED-Spots in der Decke',6,'Stk.',{
-    standard:product('Einbauspot mit Standardanschluss',130,250),premium:product('Dimmbar / höherwertig',200,370)
+    standard:product('Einbauspot mit Standardanschluss',155,205),premium:product('Dimmbar / höherwertig',215,285)
   },'labour','Je drei Spots in Küche und Gang. Die Menge ist editierbar. Leitungsführung, Brandschutz und geeignetes Deckensystem prüfen.'),
-  rate('e-controls','electric','Treiber, Schaltung und gemeinsame Zuleitung',1,'Pausch.',{standard:product('Dimmer / Schaltung und Grundanschluss',300,850)},'labour')
+  rate('e-controls','electric','Treiber, Schaltung und gemeinsame Zuleitung',1,'Pausch.',{standard:product('Dimmer / Schaltung und Grundanschluss',400,650)},'labour')
 ];
 
 const furniture = [
@@ -175,6 +182,12 @@ furniture.find(item=>item.id==='coffee').variants={
   skids:product('Schwarze Platte mit Kufengestell',170,490)
 };
 rows.push(...furniture);
+rows.push(rate('access','extras','Erschwerte Anfahrt, Etappierung oder Materialtransport',1,'Pausch.',{
+  standard:product('Budgetannahme bei erhöhtem Logistikaufwand',1200,2500)
+},'regionalLabour','Optional. Aktivieren, wenn die Anfahrt, Zufahrt oder der Materialtransport nach Besichtigung zusätzlichen Aufwand verursacht. Übliche lokale Anfahrt ist in den Standardansätzen enthalten.'));
+rows.push(rate('subfloor','extras','Altbelag entfernen oder Untergrund zusätzlich ausgleichen',30,'m²',{
+  standard:product('Mehrarbeit bei schlechtem Untergrund',30,55)
+},'parquetInstall','Optional. Menge nach Besichtigung einsetzen. Nur zusätzliche Arbeiten am Boden ausserhalb der separat kalkulierten Küche und des Bads.'));
 rows.push(rate('heating','extras','Alte Elektroheizung ersetzen',1,'Pausch.',
   {pending:product('Offerte nach Abklärung eintragen',0,0)},'energy','Der Platzhalter ist deaktiviert. Wärmeerzeuger und Wärmeverteilung separat prüfen.'));
 
@@ -248,7 +261,7 @@ function modelVariant(row){
     'k-hob':cooking?.hob,'k-hood':cooking?.hood,
     'k-top':s.worktop,'k-floor':s.floor,'b-floor':s['bath-tile'],
     'b-walls':s.sideWallFinish,'b-back':s.showerFinish,'b-glass':s.showerGlass,
-    'b-shower':s['bath-tile']?.startsWith('micro')?'seamless':undefined,
+    'b-shower':s['bath-tile']?.startsWith('micro')?'seamless':undefined, 'b-mirror':'lit',
     'i-parquet':s.parquet==='laengs'?'long':'cross','i-builtins':s.builtinsHandle,
     chairs:s.chairStyle==='wood'?'wood':'standard',coffee:s.coffeeStyle==='skids'?'skids':'standard'
   }[row.id];
@@ -311,7 +324,7 @@ function calculateQuestionnaire(){
   if(answers.kitchenWater==='retain'||answers.kitchenWater==='move')
     set('k-water',{variant:answers.kitchenWater==='move'?'move':'standard'});
   if(answers.bathWater==='retain'||answers.bathWater==='move')
-    set('b-water',{variant:answers.bathWater==='retain'?'partial':'standard'});
+    set('b-water',{variant:answers.bathWater==='retain'?'partial':'move'});
   if(answers.fixtures==='retain')for(const id of ['b-wc','b-basin','b-cabinet'])set(id,{active:false});
   if(answers.bathShower==='tray')set('b-shower',{variant:'tray'});
   if(answers.bathShower==='retain')for(const id of ['b-shower','b-glass','b-tap'])set(id,{active:false});
@@ -347,7 +360,7 @@ function rowSettings(row){
   const variant=[stored.variant,quotedVariant,answer?.variant,suggested].find(key=>Object.hasOwn(row.variants,key))??Object.keys(row.variants)[0];
   const reference=row.variants[variant], overrides=stored.prices?.[variant];
   const defaultQuantity=row.category==='furniture'?(furnitureQuantities[row.id]??0):row.quantity;
-  return {active:!coveredBy(row.id)&&(stored.active??(overrides?.quote!=null?true:answer?.active??!['heating','tv','laptop'].includes(row.id))),quantity:validNumber(row.id==='i-parquet'?defaultQuantity:answer?.fromModel?answer.quantity:stored.quantity??answer?.quantity??defaultQuantity),
+  return {active:!coveredBy(row.id)&&(stored.active??(overrides?.quote!=null?true:answer?.active??!['heating','access','subfloor','tv','laptop'].includes(row.id))),quantity:validNumber(row.id==='i-parquet'?defaultQuantity:answer?.fromModel?answer.quantity:stored.quantity??answer?.quantity??defaultQuantity),
     unit:row.unit, variant, low:validNumber(overrides?.low??reference.low),high:validNumber(overrides?.high??reference.high),quote:overrides?.quote};
 }
 
@@ -359,6 +372,7 @@ function amounts(row,settings=rowSettings(row)){
 const plus=(a,b)=>[a[0]+b[0],a[1]+b[1]];
 const factor=(pair,ratio)=>pair.map(value=>value*ratio);
 const range=pair=>pair[0]===pair[1]?nf.format(pair[0]):pair.map(value=>nf.format(value)).join(' – ');
+const budgetTarget=([low,high])=>low===high?low:Math.round((low+high)/2000)*1000;
 function calculateBudget(){
   let quoteTotal=0,open=[0,0],planningBasis=[0,0];
   const gaps=[];
@@ -389,6 +403,7 @@ function totals(){
   $('planning-total').textContent=range(planning);
   $('reserve-total').textContent=range(reserve);
   $('grand-total').textContent=range(grand);
+  $('budget-target').textContent=nf.format(budgetTarget(grand))+' CHF';
   $('cost-gaps').replaceChildren(...gaps.sort((a,b)=>b.width-a.width).slice(0,6).map(({row,values,width})=>{
     const item=element('li'),button=element('button',row.name);
     button.type='button';
@@ -669,6 +684,7 @@ $('export').onclick=()=>{
   const {quoteTotal,open,planning,reserve,grand}=calculateBudget();
   for(const [name,values] of [['Offertierte Beträge',[quoteTotal,quoteTotal]],['Offene Richtwerte',open],['Planung',planning],['Reserve',reserve],['Gesamtbudget',grand]])
     csv.push(['',name,'','','','','','','',...values.map(value=>Math.round(value*100)/100)]);
+  csv.push(['','Planungswert (gerundete Mitte)','','','','','','','',budgetTarget(grand),budgetTarget(grand)]);
   const file=new Blob(['\ufeff',csv.map(row=>row.map(escape).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(file);
   const a=element('a');a.download='FW-Kostenschaetzung.csv';a.href=url;document.body.append(a);a.click();a.remove();
