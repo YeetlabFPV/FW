@@ -42,6 +42,7 @@ nav{display:flex;flex-wrap:wrap;gap:6px;padding:10px}
 .material-swatch[data-pattern="diamond"]{background-image:repeating-linear-gradient(30deg,transparent 0 8px,var(--joint,#443c3c85) 9px 10px),repeating-linear-gradient(150deg,transparent 0 8px,var(--joint,#443c3c85) 9px 10px)}
 .material-swatch[data-pattern="cubes"]{background-image:conic-gradient(from 30deg,var(--dark) 60deg,var(--sample) 0 180deg,var(--light) 0 300deg,var(--dark) 0);background-size:16px 18px}
 .choice small{font-size:11px;font-weight:400;color:#64746a}
+.presets{border-top:1px solid #e1e6de;padding-top:12px}
 .preset-controls{display:grid;gap:9px}
 .preset-controls input,.preset-controls select{box-sizing:border-box;width:100%;min-width:0;border:1px solid #cad6cb;border-radius:8px;padding:8px;background:#f8faf6;color:inherit;font:inherit}
 .preset-actions{display:flex;flex-wrap:wrap;gap:6px}
@@ -178,8 +179,8 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
 
 <p class="preset-suggestion">Preis pro Auswahl im Vergleich · $ günstig · $$ mittel · $$$ höherpreisig</p>
 <div class="choices" id="choices"></div>
-<details class="presets" open>
-<summary>Designs</summary>
+<div class="presets" role="region" aria-labelledby="save-load-title">
+<h2 id="save-load-title">Speichern &amp; Laden</h2>
 <form class="preset-controls" id="preset-form">
 <label class="choice" id="design-name-field" hidden>Name des Designs<input id="preset-name" maxlength="80"></label>
 <fieldset id="design-identity" hidden style="margin:0;border:1px solid #c4cfc4;border-radius:8px"><legend>Beim ersten Speichern</legend><label class="choice">Dein Name<input id="design-author" maxlength="100" autocomplete="name"></label><label class="choice">Speicher-PIN<input id="design-pin" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}"></label></fieldset>
@@ -201,7 +202,7 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
  <input type="file" id="preset-file" accept=".json,application/json" hidden>
 </div>
 
-</details>
+</div>
 
 </aside>
 <section class="planning-tile" aria-labelledby="planning-title">
