@@ -2210,9 +2210,9 @@ function updateMouseLook(){
  mouseLookButton.textContent=freeLook?'Maus freigeben':'Maussteuerung';
  if(walking){
    document.querySelector('#status').textContent=mouseLocked()
-     ?'WASD zum Gehen · Maus bewegen zum Umschauen · Esc gibt die Maus frei'
-     :freeLook?'WASD zum Gehen · Maus im Ansichtsfenster bewegen · Esc beendet die Maussteuerung'
-     :'WASD oder Pfeilbuttons zum Gehen · Ziehen zum Umschauen';
+     ?'W, A, S, D zum Gehen · Maus oder Pfeiltasten zum Umschauen · Esc gibt die Maus frei'
+     :freeLook?'W, A, S, D zum Gehen · Maus im Ansichtsfenster oder Pfeiltasten zum Umschauen · Esc beendet die Maussteuerung'
+     :'W, A, S, D oder Pfeilbuttons auf dem Bildschirm zum Gehen · Pfeiltasten oder Ziehen zum Umschauen';
  }
 }
 function releaseMouseLook(){
@@ -2295,7 +2295,7 @@ function setWalking(active,lockMouse=false){
  dimensions.replaceChildren();
  if(!active)document.querySelector('#status').textContent='Ziehen zum Drehen · Scrollen zum Zoomen';
  canvas.setAttribute('aria-label',active
-   ?'Begehbare Wohnung. WASD zum Gehen, Pfeiltasten zum Umschauen.'
+   ?'Begehbare Wohnung. Die Tasten W, A, S und D dienen zum Gehen, die Pfeiltasten zum Umschauen.'
    :canvasHelp);
  if(active){
    selectWalk(returnView);
