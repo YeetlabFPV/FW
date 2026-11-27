@@ -60,6 +60,13 @@ button[aria-pressed="true"]{background:#38584b;color:white}
 canvas.placing,canvas.panning{cursor:move}
 #dimensions .placement-outline{fill:#38584b20;stroke:#31584b;stroke-width:2;stroke-dasharray:5 3}
 .stage{position:relative}
+.planning-tile{grid-column:1;padding:18px}
+.planning-tile h3{font-size:14px;margin:14px 0 4px}
+.stage-tools{position:absolute;z-index:1;top:12px;right:12px;display:flex;gap:4px;align-items:center}
+.stage.walking .stage-tools{display:none}
+.stage-tools button[data-tip]{position:relative;justify-content:center;width:38px;height:38px;padding:6px}
+.stage-tools svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:round;stroke-linecap:round}
+.stage-tools button[data-tip]:is(:hover,:focus-visible)::after{content:attr(data-tip);position:absolute;top:calc(100% + 6px);right:0;z-index:2;background:#263830;color:#fff;padding:4px 8px;border-radius:5px;white-space:nowrap;pointer-events:none}
 #dimensions{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 #dimensions line{stroke:#31584b;stroke-width:1.5}
 #dimensions text{fill:#224638;font:600 13px system-ui;paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round;text-anchor:middle}
@@ -81,7 +88,7 @@ body.walk-expanded{overflow:hidden}
 .walk-actions button[aria-pressed="true"]{background:#38584b}
 @media(max-width:780px){section:not(:fullscreen) .stage.walking:not(:fullscreen):not(.expanded) canvas{height:70dvh;min-height:0}}
 footer{padding:8px 12px;font-size:13px;color:#4a5b51}
-@media(max-width:780px){main{grid-template-columns:1fr}body{padding:12px}aside{max-height:none}}
+@media(max-width:780px){main{grid-template-columns:1fr}.planning-tile{grid-row:2}body{padding:12px}aside{max-height:none}}
 </style>
 <nav class="project-nav" aria-label="Seitennavigation"><a href="index.html" data-project="start">Startseite</a> <a href="Wohnen-und-Bad-360.html" data-project="blender">Blender-Ansichten (360°)</a> <a href="Kueche-Wohnen-3D.html" data-project="model" aria-current="page">3D-Konfigurator</a> <a href="Kueche-Wohnen-3D.html?modus=begehen" data-project="walk">Begehung</a> <a href="Kostenschaetzung.html" data-project="cost" id="cost-link">Kostenschätzung</a></nav>
 <header class="page-header"><h1 id="page-heading">3D-Konfigurator</h1></header>
@@ -92,7 +99,7 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
   <button data-view="Wohnung">Wohnung</button><button data-view="Küche">Küche</button><button data-view="Wohnen">Wohnen</button><button data-view="Bad">Bad</button><button data-view="Zimmer Eingang">Zimmer Eingang</button><button data-view="Schlafzimmer 1">Schlafzimmer 1</button><button data-view="Schlafzimmer 2">Schlafzimmer 2</button>
  </div>
  <div class="toolbar-group view-toolbar" role="group" aria-label="Ansicht"><strong>Ansicht</strong>
-  <button type="button" id="walk-mode" aria-pressed="false">Begehung starten</button><button data-view="Draufsicht">Draufsicht</button><button id="walls" aria-pressed="true">Wände kürzen</button><button id="doors" aria-pressed="false">Türblätter</button><button id="door-frames" aria-pressed="true">Türrahmen</button><button id="windows" aria-pressed="true">Fenster</button><button type="button" id="pan-view" aria-pressed="false">Ansicht verschieben</button><button type="button" id="center-view" hidden>Zentrieren</button><button id="full">Vollbild</button><label class="render-quality">Grafik <select id="render-quality"><option value="auto">Automatisch</option><option value="high">Maximale Details</option></select></label>
+  <button type="button" id="walk-mode" aria-pressed="false">Begehung starten</button><button data-view="Draufsicht">Draufsicht</button><button id="walls" aria-pressed="true">Wände kürzen</button><button id="full">Vollbild</button><label class="render-quality">Grafik <select id="render-quality"><option value="auto">Automatisch</option><option value="high">Maximale Details</option></select></label>
  </div>
  <div class="toolbar-group" role="group" aria-label="Planung"><strong>Planung</strong>
   <button data-view="Küchenmasse">Küchenmasse</button><button id="placement" aria-pressed="false">Möbel platzieren</button>
@@ -112,7 +119,13 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
  </div>
  <small id="placement-message" role="status">Möbel auswählen und in der Draufsicht ziehen.</small>
 </div>
-<div class="stage"><canvas tabindex="0" aria-label="3D-Modell. Mit Pfeiltasten drehen, mit Plus und Minus zoomen. Mit Umschalt und Pfeiltasten die Ansicht verschieben."></canvas><svg id="dimensions" role="img" aria-label="Wandabstände in Zentimetern"></svg><div class="walk-actions" id="walk-actions" hidden><button type="button" id="mouse-look" aria-pressed="false" hidden>Maussteuerung</button><button type="button" id="walk-full" aria-pressed="false">Vollbild</button><button type="button" id="leave-walk">Begehung beenden</button><a class="control" id="walk-home" href="index.html">Startseite</a></div><div class="walk-controls" id="walk-controls" role="group" aria-label="Gehrichtung" hidden>
+<div class="stage"><canvas tabindex="0" aria-label="3D-Modell. Mit Pfeiltasten drehen, mit Plus und Minus zoomen. Mit Umschalt und Pfeiltasten die Ansicht verschieben."></canvas><svg id="dimensions" role="img" aria-label="Wandabstände in Zentimetern"></svg><div class="stage-tools" role="group" aria-label="Ansichtsoptionen">
+<button type="button" id="pan-view" aria-pressed="false" aria-label="Ansicht verschieben" data-tip="Ansicht verschieben"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v20M2 12h20M9 5l3-3 3 3M9 19l3 3 3-3M5 9l-3 3 3 3m14-6 3 3-3 3"/></svg></button>
+<button type="button" id="center-view" hidden>Zentrieren</button>
+<button type="button" id="doors" aria-pressed="false" aria-label="Türblätter ein- oder ausblenden" data-tip="Türblätter ein- oder ausblenden"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21h14M6 21V4l10-2v19m-4-9h1"/></svg></button>
+<button type="button" id="door-frames" aria-pressed="true" aria-label="Türrahmen ein- oder ausblenden" data-tip="Türrahmen ein- oder ausblenden"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V3h16v18M7 21V6h10v15"/></svg></button>
+<button type="button" id="windows" aria-pressed="true" aria-label="Fenster ein- oder ausblenden" data-tip="Fenster ein- oder ausblenden"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v18H3zM12 3v18M3 12h18"/></svg></button>
+</div><div class="walk-actions" id="walk-actions" hidden><button type="button" id="mouse-look" aria-pressed="false" hidden>Maussteuerung</button><button type="button" id="walk-full" aria-pressed="false">Vollbild</button><button type="button" id="leave-walk">Begehung beenden</button><a class="control" id="walk-home" href="index.html">Startseite</a></div><div class="walk-controls" id="walk-controls" role="group" aria-label="Gehrichtung" hidden>
 <button type="button" data-step="forward" aria-label="Vorwärts">↑</button>
 <button type="button" data-step="left" aria-label="Nach links">←</button>
 <button type="button" data-step="back" aria-label="Rückwärts">↓</button>
@@ -137,22 +150,23 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
 <fieldset id="design-identity" hidden style="margin:0;border:1px solid #c4cfc4;border-radius:8px"><legend>Beim ersten Speichern</legend><label class="choice">Dein Name<input id="design-author" maxlength="100" autocomplete="name"></label><label class="choice">Speicher-PIN<input id="design-pin" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}"></label></fieldset><p id="preset-status" role="status"></p>
 </form>
 </details>
-<section aria-labelledby="planning-title">
+
+</aside>
+<section class="planning-tile" aria-labelledby="planning-title">
 <h2 id="planning-title">Planungsangaben</h2>
-<h2>Küche</h2>
+<h3>Küche</h3>
 <p>Die Wandzeile enthält einen 60 cm breiten, hohen Kühl-Gefrierschrank, Arbeitsfläche sowie Ober- und Unterschränke. Zur Seitenwand sitzt eine 10 cm breite Passleiste, oben bündig mit dem Kühlschrank. Durchgehende Sockel schliessen die sichtbaren Bodenfugen. Die Kühlschranktür ist rechts angeschlagen und öffnet zum Arbeitsgang. In der Draufsicht sind die Öffnungsbereiche orange markiert.</p>
 <p>Die Halbinsel bündelt Spüle, Kochfeld und Backofen. Unter der Spüle sitzt auf der Bedienseite eine 55 cm breite Front für den Abfallschrank. Sie ist 2,00 × 0,65 m gross und endet bündig mit der geschlossenen Küchenwand. Die Wandzeile reicht bündig bis unter das Fenster. Die Arbeitsplatten sind 65 cm tief, die Oberschränke 35 cm. Der Arbeitsgang misst 116 cm.</p>
 <p>Das V-ZUG CombiCookTop I804 sitzt flächenbündig in der 65 cm tiefen Halbinsel. Der Ausschnitt misst 767 × 507 mm. Unter dem Kochfeld liegt ein 90 cm breites Schubladenmöbel mit Platz für den Umluft-Flachkanal und Luftaustritt im Sockel. Die BORA-Variante hat ein 60 cm breites Schubladenmöbel. Beide haben je zwei Auszüge mit rund 30 cm hohen Fronten und eine feste Blende vor dem Abzug. Bei V-ZUG und BORA sitzt der Backofen in der gegenüberliegenden Wandzeile. Bei Glaskeramik sitzt der Backofen jeweils unter dem Kochfeld. Zur Wahl stehen die Halbinsel mit Inselhaube und die Wandzeile mit Abzug im Oberschrank. In dieser Variante liegt ein vollintegrierter 60-cm-Geschirrspüler neben der Spüle in der Halbinsel.</p>
-<h2>Wohnen und Essen</h2>
+<h3>Wohnen und Essen</h3>
 <p>Quer verlegtes, mattes Eichenparkett mit sichtbaren Ästen. Der anthrazitgraue Schiefer in der Küche endet an der Wohnkante der Halbinsel. Über «Parkett längs» lässt sich die Verlegerichtung drehen. Über «Türblätter», «Türrahmen» und «Fenster» lässt sich die Ansicht vereinfachen.</p>
 <p>Der freistehende Esstisch ist quer zur rechten Fensterwand ausgerichtet und bietet Platz für vier Stühle. Zwischen der rechten Tischkante und der Sofawand liegen rund 1,35 m. Der Durchgang aus der Küche liegt auf dieser Seite. Im Eingangsbereich und im Wohnzimmer sind die Nischen mit hohen Einbauschränken belegt. Das Sofa schaut zum TV auf dem schwebenden pastellfliederfarbenen Lowboard. Das Lowboard endet rund 21 cm vor der Schlafzimmertür. Das gegenüber der Küche liegende Fenster an der unteren Fassadenseite ist bodentief eingezeichnet.</p>
-<h2>Bad</h2>
+<h3>Bad</h3>
 <p>Ca. 3,01 × 1,42 m, ohne Fenster. Die geflieste Vorwand mit durchgehendem Sims verläuft rechts vom Eingang hinter Lavabo und WC bis zur Dusche. Der Heizkörper links nach dem Eingang bleibt. Der Duschanschluss liegt wie im Bestand hinten rechts. Salbeigrüner Waschtisch, warmes Feinsteinzeug, eine blaugrüne Duschrückwand, ein rechteckiges Aufsatzlavabo und ein wandhängendes WC. Über «Bestandsfliesen Bad» lassen sich die dunklen Bodenfliesen aus dem Bestandsfoto vergleichen. Positionen und Fliesenformat nach Foto angenähert.</p>
 <p>Rahmenloses Duschglas bis zur Decke. Die Ablaufrinne ist bündig im Duschboden eingelassen, mit einem sichtbaren Abstand zur WC-Wand.</p>
-<h2>Planungsstand</h2>
+<h3>Planungsstand</h3>
 <p>Fensterpositionen und Abmessungen nach dem markierten Grundriss, teils abgelesen. Raumhöhe 2,39 m. Vor Ausführung Aufmass, Tragwerk und Leitungen prüfen lassen.</p>
 </section>
-</aside>
 </main>
 <script src="Materialpreise.js?v=2"></script>
 <script src="Team-Konfiguration.js"></script>
