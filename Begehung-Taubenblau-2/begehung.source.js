@@ -116,7 +116,7 @@ renderer.setAnimationLoop(time=>{
   renderer.render(scene,camera);
 });
 async function loadScene(loader){
-  const filename=variant==='puderblau'?'Puderblau-Begehung.bin':'Taubenblau-2-Begehung.bin';
+  const filename=variant==='puderblau'?'Puderblau-Begehung.bin?v=2':'Taubenblau-2-Begehung.bin';
   const response=await fetch('../'+filename);
   if(!response.ok||!response.body)throw Error('Szenendatei konnte nicht geladen werden.');
   const bytes=await new Response(response.body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
@@ -136,6 +136,7 @@ async function load(){
   if(variant==='puderblau'){
     gltf.scene.scale.z=-1;
     configuration.name='Puderblau · Schwarzer Granit · Nebelblau';
+    document.querySelector('#blender-render').href='../Puderblau-kueche-360.jpg';
   }
   document.querySelector('#title').textContent='Blender-Begehung · '+configuration.name;
   document.title=document.querySelector('#title').textContent;
