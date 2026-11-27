@@ -15,7 +15,9 @@ const sources = {
   bath: ['suissetec · BadPlaner und Elementkalkulation Sanitär', 'https://suissetec.ch/de/digitaler-verkaufskanal-badplaner.html'],
   ikea: ['IKEA Schweiz · METOD Küchenkombinationen', 'https://www.ikea.com/ch/de/cat/metod-kuechenkombinationen-50005/'],
   appliances: ['IKEA Schweiz · Küchengeräte', 'https://www.ikea.com/ch/de/cat/elektrogeraete-fuer-metod-50382/'],
-  premium: ['V-ZUG Schweiz · Backofen als Premium-Preisbeispiel', 'https://www.vzug.com/ch/de/produkte/kueche/backoefen/herde/combair-v600-7uh--p2203300000'],
+  smsOven: ['Sanigroup · Elektrogeräte, u. a. SMS-Backofen EB6L5DSP', 'https://sanigroup.ch/Marke/electrolux/'],
+  smsDishwasher: ['Fust · Vollintegrierte Geschirrspüler 55 cm', 'https://www.fust.ch/kuechengeraete/kuecheneinbaugeraete/einbau-geschirrspueler-spuelmaschine/einbau-geschirrspueler-55-cm-vollintegriert/c/GS_Geschirrspueler_Einbau_CH55cm_Vollintegriert'],
+  smsFridge: ['Fust · Integrierte Kühl-Gefriergeräte 55 cm', 'https://www.fust.ch/kuechengeraete/kuecheneinbaugeraete/einbaukuehlschrank/einbaukuehlschrank-55-cm/einbaukuehlschrank-mit-gefrierfach-55-cm-vollintegriert/c/KUE_Kuehlschrank_Einbau_2tuerig_CH55cm_Vollintegriert'],
   armchair: ['IKEA Schweiz · DYVLINGE Drehsessel', 'https://www.ikea.com/ch/de/p/dyvlinge-drehsessel-kelinge-schwarz-00555090/'],
   home: ['IKEA Schweiz · Möbel und Wohnaccessoires', 'https://www.ikea.com/ch/de/cat/produkte-products/'],
   pax: ['IKEA Schweiz · PAX / FORSAND 100 cm', 'https://www.ikea.com/ch/de/p/pax-forsand-kleiderschrank-weiss-weiss-s79503017/'],
@@ -98,9 +100,9 @@ const rows = [
   rate('k-water','kitchen','Wasser- und Abwasseranschluss Küche',1,'Pausch.',{short:product('Kurze neue Leitungsführung zur Halbinsel',1600,2500),standard:product('Bestehende Anschlusspunkte nutzen',850,1350),move:product('Aufwendige Leitungsführung mit Öffnen des Bodens',2800,4200)},'labour','Für den Entwurf ist eine kurze Leitungsführung angenommen. Gefälle und Leitungsweg beim Aufmass klären.'),
   rate('k-power','kitchen','Elektroanschlüsse für die Küche',1,'Pausch.',{standard:product('Geräteanschlüsse und Steckdosen',1350,2100)},'labour','Deckenbeleuchtung separat.'),
   rate('k-hob','kitchen','Kochfeld',1,'Stk.',{standard:product('Standard',350,750),premium:product('Premium',1150,2550),retained:retain},'appliances'),
-  rate('k-oven','kitchen','Backofen',1,'Stk.',{standard:product('Standard',450,900),premium:product('Premium',1800,3200),retained:retain},'premium'),
-  rate('k-dishwasher','kitchen','Geschirrspüler, integriert',1,'Stk.',{standard:product('Standard',550,950),premium:product('Premium',1500,2900),retained:retain},'appliances'),
-  rate('k-fridge','kitchen','Kühl-Gefrierkombination, integriert',1,'Stk.',{standard:product('Standard',800,1150),premium:product('Premium',1600,2350),retained:retain},'appliances'),
+  rate('k-oven','kitchen','Backofen · 55 cm SMS',1,'Stk.',{standard:product('Standard',1050,1450),premium:product('Premium',1800,3200),retained:retain},'smsOven'),
+  rate('k-dishwasher','kitchen','Geschirrspüler · 55 cm SMS',1,'Stk.',{standard:product('Standard',1100,1550),premium:product('Premium',1500,2900),retained:retain},'smsDishwasher'),
+  rate('k-fridge','kitchen','Kühl-Gefrierkombination · 55 cm SMS',1,'Stk.',{standard:product('Standard',1250,1650),premium:product('Premium',1600,2350),retained:retain},'smsFridge'),
   rate('k-hood','kitchen','Dunstabzug',1,'Stk.',{standard:product('Standard',300,850),premium:product('Premium',1050,2300),retained:retain},'appliances'),
   rate('b-demo','bath','Rückbau Bad und Entsorgung',1,'Pausch.',{standard:product('Sanitärobjekte sowie Beläge in den erneuerten Zonen',1250,1850),partial:product('Nur auszutauschende Objekte',550,950)},'bathBuild','Bei Überstreichen oder Teilumbau Umfang separat anpassen.'),
   rate('b-water','bath','Sanitärleitungen und Anschlüsse',1,'Pausch.',{standard:product('Anschlüsse und Fallstrang bleiben in der Nähe',2100,3100),partial:product('Anschlüsse weitgehend behalten',1050,1650),move:product('Anschlüsse über längere Strecke versetzen',3200,4600)},'bath','Für den Entwurf ist die Dusche am bisherigen Ort vorgesehen. Leitungen und Anschlüsse separat von Armaturen, Apparaten und Punktablauf bzw. Rinne.'),
@@ -205,7 +207,7 @@ state.rows ??= {};
 state.custom = Array.isArray(state.custom) ? state.custom : [];
 state.bundles = Array.isArray(state.bundles) ? state.bundles : [];
 const layoutDeviceLabels={
-  'k-hob':{ceramic:'Glaskeramik · 60 cm',bora:'BORA S Pure mit Abzug',vzug:'V-ZUG CombiCookTop I804 mit Abzug'},
+  'k-hob':{ceramic:'Glaskeramik · für 55-cm-SMS-Modul',bora:'BORA S Pure mit Abzug',vzug:'V-ZUG CombiCookTop I804 mit Abzug'},
   'k-hood':{wall:'Umluft-Einbauhaube im Oberschrank',island:'Hängende Umluft-Inselhaube',integrated:'Im Kochfeld enthalten'}
 };
 for(const row of rows){

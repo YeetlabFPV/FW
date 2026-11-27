@@ -24,10 +24,10 @@ const materialPriceGuide = {
     petrol:[3,145,205], green:[3,140,195], iceCube:[3,145,205]
   },
   'b-glass': {clear:[1,900,1350], reeded:[3,1100,2050]},
-  'k-hob': {ceramic:[1,430,690], bora:[3,2480,2800], vzug:[3,4800,5250]},
+  'k-hob': {ceramic:[1,860,1050], bora:[3,2480,2800], vzug:[3,4800,5250]},
   'k-hood': {wall:[1,240,480], island:[2,930,1350], integrated:[0,0,0]},
-  'k-oven': {standard:[1,450,850]},
-  'k-dishwasher': {standard:[1,599,899]}
+  'k-oven': {standard:[1,1050,1450]},
+  'k-dishwasher': {standard:[1,1100,1550]}
 };
 materialPriceGuide['b-back']={...materialPriceGuide['b-walls'],paint:[2,145,210]};
 
