@@ -2812,7 +2812,8 @@ function renderDesignCards(){
  for(const [title,preset] of presets)add('Meine Designs',{title,preset,selections:preset.selections,editable:true});
  for(const record of sharedDesigns){
    const own=record.owner_id===designUser?.id;
-   add(own?'Meine Designs':'Designs von '+record.author,{...record,editable:own,deletable:own||designAdmin});
+   const sameName=designCanWrite&&Boolean(designAuthor)&&record.author.trim().toLowerCase()===designAuthor.toLowerCase();
+   add(own||sameName?'Meine Designs':'Designs von '+record.author,{...record,editable:own,deletable:own||sameName||designAdmin});
  }
  if(!groups.size){designCards.textContent='Noch keine Designs gespeichert.';return;}
  for(const [label,records] of groups){
@@ -2989,7 +2990,8 @@ async function refreshDesignIdentity(client){
  designUser=session?.user;
  designAdmin=Boolean(designUser&&!designUser.is_anonymous&&(await client.rpc('fw_is_admin')).data===true);
  designCanWrite=designAdmin||Boolean(designUser&&(await client.rpc('fw_team_member')).data===true);
- designAuthor=designCanWrite?storedDesignAuthor():'';
+ const author=designUser?.user_metadata?.fw_design_author;
+ designAuthor=designCanWrite&&typeof author==='string'?author.trim():'';
  updateDesignIdentity();
 }
 function openDesignLogin(resumeSave=false){
@@ -3020,11 +3022,11 @@ loginForm.addEventListener('submit',async event=>{
      const {data}=await client.rpc('fw_join_team',{team_code:loginPin.value});
      if(data!==true)throw new Error('Der PIN stimmt nicht oder es gab zu viele Versuche.');
    }
+   const {error}=await client.auth.updateUser({data:{fw_design_author:author}});
+   if(error)throw new Error('Dein Name konnte nicht gespeichert werden. Versuch es erneut.');
    try{localStorage.setItem('fw-team-author',author);}catch{}
    await refreshDesignIdentity(client);
    if(!designCanWrite)throw new Error('Die Anmeldung konnte nicht bestätigt werden.');
-   designAuthor=author;
-   updateDesignIdentity();
    const resume=saveAfterLogin;
    loginDialog.close();
    await refreshDesigns().catch(()=>{});
