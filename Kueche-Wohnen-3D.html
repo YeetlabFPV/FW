@@ -59,6 +59,13 @@ button[aria-pressed="true"]{background:#38584b;color:white}
 canvas.placing,canvas.panning{cursor:move}
 #dimensions .placement-outline{fill:#38584b20;stroke:#31584b;stroke-width:2;stroke-dasharray:5 3}
 .stage{position:relative}
+.saved-designs{margin-top:14px;border-top:1px solid #dbdfd6;padding-top:10px}
+.design-cards{display:grid;gap:9px;margin:8px 0 12px}
+.design-card{padding:8px;background:#f8faf6;border:1px solid #d6ded5;border-radius:8px}
+.design-card img,.design-placeholder{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:5px;background:#e9eee8}
+.design-placeholder{display:grid;place-items:center;color:#456052;font-size:12px}
+.design-card p{margin:3px 0 6px}
+.design-card button{margin:0 4px 4px 0;font-size:12px}
 .planning-tile{grid-column:1;padding:18px}
 .planning-tile h3{font-size:14px;margin:14px 0 4px}
 .stage-tools{position:absolute;z-index:1;top:12px;right:12px;display:flex;gap:4px;align-items:center}
@@ -148,10 +155,14 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
 <label class="choice">Name des Designs<input id="preset-name" maxlength="80" aria-describedby="preset-suggestion"></label>
 <p class="preset-suggestion" id="preset-suggestion"></p>
 <button type="submit">Design speichern</button>
-<label class="choice">Gespeicherte Designs<select id="preset-list"><option value="">Design wählen</option></select></label>
-<div class="preset-actions"><button type="button" id="preset-load" disabled>Design laden</button><button type="button" id="preset-import">Design importieren</button></div><details><summary>Datei und Standardanordnung</summary><div class="preset-actions"><button type="button" id="preset-export">Design als Datei herunterladen</button><button type="button" id="preset-default">Standardanordnung laden</button><input type="file" id="preset-file" accept=".json,application/json" hidden></div></details>
+<div class="preset-actions"><button type="button" id="preset-import">Design importieren</button></div><details><summary>Datei und Standardanordnung</summary><div class="preset-actions"><button type="button" id="preset-export">Design als Datei herunterladen</button><button type="button" id="preset-default">Standardanordnung laden</button><input type="file" id="preset-file" accept=".json,application/json" hidden></div></details>
 <fieldset id="design-identity" hidden style="margin:0;border:1px solid #c4cfc4;border-radius:8px"><legend>Beim ersten Speichern</legend><label class="choice">Dein Name<input id="design-author" maxlength="100" autocomplete="name"></label><label class="choice">Speicher-PIN<input id="design-pin" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}"></label></fieldset><p id="preset-status" role="status"></p>
 </form>
+<details class="saved-designs" id="saved-designs">
+ <summary>Gespeicherte Designs</summary>
+ <div id="design-cards"></div>
+ <p id="design-manage-status" role="status"></p>
+</details>
 </details>
 
 </aside>
@@ -159,7 +170,7 @@ footer{padding:8px 12px;font-size:13px;color:#4a5b51}
 <h2 id="planning-title">Planungsangaben</h2>
 <h3>Küche</h3>
 <p>Die Wandzeile enthält einen 60 cm breiten, hohen Kühl-Gefrierschrank, Arbeitsfläche sowie Ober- und Unterschränke. Zur Seitenwand sitzt eine 10 cm breite Passleiste, oben bündig mit dem Kühlschrank. Durchgehende Sockel schliessen die sichtbaren Bodenfugen. Die Kühlschranktür ist rechts angeschlagen und öffnet zum Arbeitsgang. In der Draufsicht sind die Öffnungsbereiche orange markiert.</p>
-<p>Die 200 × 65 cm grosse Halbinsel hat einen 50-cm-Spülenunterschrank mit Abfallauszug direkt unter dem Becken. Beim Abzug im Oberschrank folgen der vollintegrierte 60-cm-Geschirrspüler und ein 80-cm-Schubladenblock. Beim Inselkochfeld mit Backofen folgen ein 60-cm-Backofenfeld und ein 80-cm-Schubladenblock. Bei V-ZUG folgen 90 cm unter dem Kochfeld und 50 cm für Schubladen; bei BORA sind es 80 und 60 cm.</p>
+<p>Die 200 × 65 cm grosse Halbinsel hat einen 50-cm-Spülenunterschrank mit Abfallauszug direkt unter dem Becken. Beim Abzug im Oberschrank steht der vollintegrierte 60-cm-Geschirrspüler wandseitig. Daneben folgen Spüle und ein 80-cm-Schubladenblock. Beim Inselkochfeld mit Backofen folgen ein 60-cm-Backofenfeld und ein 80-cm-Schubladenblock. Bei V-ZUG folgen 90 cm unter dem Kochfeld und 50 cm für Schubladen; bei BORA sind es 80 und 60 cm.</p>
 <p>Freie Schubladenblöcke haben oben eine flache Schublade für Besteck und darunter zwei tiefe Auszüge. Unter Kochfeldern mit integriertem Abzug bleiben zwei Auszüge und eine feste Geräteblende. In Varianten mit Kochfeld auf der Halbinsel sitzt der 60-cm-Geschirrspüler neben dem Kühlschrank. Die Planung verwendet 60-cm-Gerätenischen nach dem Euro-Raster; Leitungswege, Auszugtiefen, Passleisten und Gerätefreigaben sind vor Bestellung zu prüfen.</p>
 <h3>Wohnen und Essen</h3>
 <p>Quer verlegtes, mattes Eichenparkett mit sichtbaren Ästen. Der anthrazitgraue Schiefer in der Küche endet an der Wohnkante der Halbinsel. Über «Parkett längs» lässt sich die Verlegerichtung drehen. Über «Türblätter», «Türrahmen» und «Fenster» lässt sich die Ansicht vereinfachen.</p>
@@ -985,10 +996,11 @@ function updateContactShadows(){
 function build(){
  updateContactShadows();
  const data=[],glass=[];
+ const wallHob=cookingSetup==='ceramicWall';
  const peninsulaStart=5.45;
  const sinkModuleWidth=.50;
  const originalSink=model.find(piece=>piece.name==='Spuele');
- const sinkShift=peninsulaStart+sinkModuleWidth/2-originalSink.x-originalSink.w/2;
+ const sinkShift=peninsulaStart+(wallHob?.60:0)+sinkModuleWidth/2-originalSink.x-originalSink.w/2;
  const sink={...originalSink,x:originalSink.x+sinkShift};
  const nextIslandModule=peninsulaStart+sinkModuleWidth;
  const sinkRim=sink.z+.003;
@@ -998,9 +1010,8 @@ function build(){
  const ceramic=cookingSetup==='ceramicIsland';
  const bora=cookingSetup==='boraWallOven';
  const vzug=cookingSetup==='integrated';
- const wallHob=cookingSetup==='ceramicWall';
  const ovenInWall=bora||vzug||wallHob;
- const peninsulaModules=wallHob?[[sinkModuleWidth,'sink'],[.60,'dishwasher'],[.80,'drawers']]
+ const peninsulaModules=wallHob?[[.60,'dishwasher'],[sinkModuleWidth,'sink'],[.80,'drawers']]
    :vzug?[[sinkModuleWidth,'sink'],[.90,'extractor'],[.50,'drawers']]
    :bora?[[sinkModuleWidth,'sink'],[.80,'extractor'],[.60,'drawers']]
    :[[sinkModuleWidth,'sink'],[.60,'oven'],[.80,'drawers']];
@@ -1862,7 +1873,7 @@ function build(){
  function drawPiece(b,id){
    if(!activeFurniture(b,id)||removedFurniture.has(id))return;
    if(b.name==='Halbinsel_Korpus'){
-     const washerLeft=nextIslandModule,washerRight=washerLeft+.60;
+     const washerLeft=peninsulaStart,washerRight=washerLeft+.60;
      const ovenLeft=hobCenter-.30,ovenRight=hobCenter+.30;
      if(wallHob){
        addObject({...b,w:washerLeft-b.x},undefined);
@@ -2526,7 +2537,7 @@ dishwasherLocation.setAttribute('aria-live','polite');
 cookingSelect.closest('label').append(dishwasherLocation);
 function updateDishwasherLocation(){
  dishwasherLocation.textContent=cookingSetup==='ceramicWall'
-   ?'Halbinsel von der Spüle aus: 50 cm Abfallauszug unter der Spüle, 60 cm Geschirrspüler mit durchgehender Front, 80 cm Schubladenblock.'
+   ?'Halbinsel von der Wand aus: 60 cm Geschirrspüler, 50 cm Spülenunterschrank mit Abfallauszug, 80 cm Schubladenblock.'
    :'Geschirrspüler: in der Wandzeile direkt neben dem Kühlschrank. Du erkennst ihn an der durchgehenden 60-cm-Möbelfront mit einem Griff.';
 }
 updateDishwasherLocation();
@@ -2595,9 +2606,9 @@ refreshMaterialSamples();
 const presetKey='fw-materialkombinationen-v1';
 const presetForm=document.querySelector('#preset-form');
 const presetName=document.querySelector('#preset-name');
-const presetList=document.querySelector('#preset-list');
+const designCards=document.querySelector('#design-cards');
+const manageStatus=document.querySelector('#design-manage-status');
 const presetSuggestion=document.querySelector('#preset-suggestion');
-const presetLoad=document.querySelector('#preset-load');
 const presetStatus=document.querySelector('#preset-status');
 let presets=new Map();
 try{presets=new Map(JSON.parse(localStorage.getItem(presetKey)??'[]'));}catch{}
@@ -2630,31 +2641,116 @@ function configuration(name){
 document.querySelector('#cost-link').addEventListener('click',()=>{
  try{sessionStorage.setItem('fw-kosten-konfiguration',JSON.stringify(configuration(suggestedPresetName())));}catch{}
 });
-let designClient, sharedDesigns = [], designUser;
+let designClient, sharedDesigns=[], designUser, designAdmin=false;
 const identity=document.querySelector('#design-identity');
 const authorInput=document.querySelector('#design-author');
 const pinInput=document.querySelector('#design-pin');
 try{authorInput.value=localStorage.getItem('fw-team-author')||'';}catch{}
 
-function updatePresetList(active=''){
- presetList.replaceChildren(new Option('Design wählen',''));
+function designPayload(name){
+ const payload=configuration(name);
+ try{
+   draw();
+   const preview=document.createElement('canvas');
+   preview.width=240;
+   preview.height=135;
+   const scale=Math.max(240/canvas.width,135/canvas.height);
+   const w=canvas.width*scale,h=canvas.height*scale;
+   preview.getContext('2d').drawImage(canvas,(240-w)/2,(135-h)/2,w,h);
+   payload.thumbnail=preview.toDataURL('image/jpeg',.72);
+ }catch{}
+ return payload;
+}
+function renderDesignCards(){
+ designCards.replaceChildren();
  const groups=new Map();
- function add(group,label,value){
-   if(!groups.has(group)){
-     const options=document.createElement('optgroup');
-     options.label=group;
-     presetList.append(options);
-     groups.set(group,options);
+ function add(group,record){
+   if(!groups.has(group))groups.set(group,[]);
+   groups.get(group).push(record);
+ }
+ for(const [title,preset] of presets)add('Meine Designs',{title,preset,preview:preset.thumbnail,editable:true});
+ for(const record of sharedDesigns){
+   const own=record.owner_id===designUser?.id;
+   add(own?'Meine Designs':'Designs von '+record.author,{...record,editable:own||designAdmin});
+ }
+ if(!groups.size){designCards.textContent='Noch keine Designs gespeichert.';return;}
+ for(const [label,records] of groups){
+   const heading=document.createElement('h3');
+   heading.textContent=label;
+   const group=document.createElement('div');
+   group.className='design-cards';
+   designCards.append(heading,group);
+   for(const record of records){
+     const card=document.createElement('article');
+     card.className='design-card';
+     const hasPreview=typeof record.preview==='string'&&record.preview.length<60000&&/^data:image\/jpeg;base64,[A-Za-z0-9+/]+=*$/.test(record.preview);
+     const picture=document.createElement(hasPreview?'img':'div');
+     if(hasPreview){
+       picture.src=record.preview;
+       picture.alt='';
+       picture.loading='lazy';
+     }else{
+       picture.className='design-placeholder';
+       picture.textContent='Keine Vorschau';
+     }
+     const title=document.createElement('p');
+     title.textContent=record.title;
+     card.append(picture,title);
+     function action(label,run){
+       const button=document.createElement('button');
+       button.type='button';
+       button.textContent=label;
+       button.addEventListener('click',async()=>{
+         button.disabled=true;
+         manageStatus.textContent='';
+         try{await run();}catch(error){manageStatus.textContent=error.message;}
+         finally{button.disabled=false;}
+       });
+       card.append(button);
+     }
+     action('Laden',()=>loadSavedDesign(record));
+     if(record.editable){
+       action('Überschreiben',()=>manageDesign(record,'overwrite'));
+       action('Löschen',()=>manageDesign(record,'delete'));
+     }
+     group.append(card);
    }
-   groups.get(group).append(new Option(label,value));
  }
- for(const name of presets.keys())add('Meine Designs',name,'local:'+name);
- for(const design of sharedDesigns){
-   const own=design.owner_id===designUser?.id;
-   add(own?'Meine Designs':'Designs von '+design.author,design.title,'shared:'+design.id);
+}
+async function loadSavedDesign(record){
+ let preset=record.preset;
+ if(!preset){
+   const client=await connectDesigns();
+   const {data,error}=await client.from('fw_entries').select('payload').eq('id',record.id).eq('kind','design').single();
+   if(error)throw new Error('Das Design konnte nicht geladen werden.');
+   preset=data.payload;
  }
- presetList.value=active;
- presetLoad.disabled=!presetList.value;
+ if(!preset?.selections)throw new Error('Dieses Design ist unvollständig.');
+ applyConfiguration(preset);
+ manageStatus.textContent='Design geladen.';
+}
+async function manageDesign(record,operation){
+ const overwrite=operation==='overwrite';
+ if(!confirm(overwrite?'«'+record.title+'» mit dem aktuellen Design überschreiben?':'«'+record.title+'» löschen?'))return;
+ if(record.preset){
+   const next=new Map(presets);
+   if(overwrite)next.set(record.title,designPayload(record.title));
+   else next.delete(record.title);
+   localStorage.setItem(presetKey,JSON.stringify([...next]));
+   presets=next;
+   renderDesignCards();
+ }else{
+   const client=await connectDesigns();
+   const entries=client.from('fw_entries');
+   const change=overwrite?entries.update({payload:designPayload(record.title)}):entries.delete();
+   const {data,error}=await change.eq('id',record.id).eq('kind','design').select('id').maybeSingle();
+   if(error||!data)throw new Error('Die Änderung konnte nicht gespeichert werden. Prüfe deine Berechtigung.');
+   try{await refreshDesigns();}catch{
+     manageStatus.textContent='Änderung gespeichert. Die Liste wird beim nächsten Öffnen aktualisiert.';
+     return;
+   }
+ }
+ manageStatus.textContent=overwrite?'Design überschrieben.':'Design gelöscht.';
 }
 async function connectDesigns(){
  if(designClient)return designClient;
@@ -2663,26 +2759,26 @@ async function connectDesigns(){
  const {createClient}=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/+esm');
  return designClient??=createClient(config.url,config.publishableKey);
 }
-async function refreshDesigns(active=presetList.value){
+async function refreshDesigns(){
  const client=await connectDesigns();
  const {data:{session}}=await client.auth.getSession();
  designUser=session?.user;
+ designAdmin=Boolean(designUser&&!designUser.is_anonymous&&(await client.rpc('fw_is_admin')).data===true);
  const items=[];
  for(let offset=0;;offset+=250){
-   const {data,error}=await client.from('fw_entries').select('id,title,author,owner_id').eq('kind','design')
+   const {data,error}=await client.from('fw_entries').select('id,title,author,owner_id,preview:payload->>thumbnail').eq('kind','design')
      .order('created_at',{ascending:false}).order('id').range(offset,offset+249);
    if(error)throw new Error('Gespeicherte Designs konnten nicht geladen werden.');
    items.push(...data);
    if(data.length<250)break;
  }
  sharedDesigns=items;
- updatePresetList(active);
+ renderDesignCards();
 }
-updatePresetList();
+renderDesignCards();
 updatePresetSuggestion();
-presetList.addEventListener('change',()=>{presetLoad.disabled=!presetList.value;});
-presetForm.closest('details').addEventListener('toggle',event=>{
- if(event.currentTarget.open)refreshDesigns().catch(error=>{presetStatus.textContent=error.message;});
+document.querySelector('#saved-designs').addEventListener('toggle',event=>{
+ if(event.currentTarget.open)refreshDesigns().catch(error=>{manageStatus.textContent=error.message;});
 });
 presetForm.addEventListener('submit',async event=>{
  event.preventDefault();
@@ -2715,13 +2811,14 @@ presetForm.addEventListener('submit',async event=>{
    }
    pinInput.value='';
    const name=presetName.value.trim()||suggestedPresetName();
-   const {data,error}=await client.from('fw_entries').insert({kind:'design',title:name,author,payload:configuration(name)}).select('id').single();
+   const {data,error}=await client.from('fw_entries').insert({kind:'design',title:name,author,payload:designPayload(name)}).select('id').single();
    if(error)throw new Error('Das Design konnte nicht gespeichert werden. Versuch es erneut.');
    try{localStorage.setItem('fw-team-author',author);}catch{}
    identity.hidden=true;
    presetName.value=name;
    presetStatus.textContent='Design gespeichert.';
-   await refreshDesigns('shared:'+data.id).catch(()=>{});
+   document.querySelector('#saved-designs').open=true;
+   await refreshDesigns().catch(()=>{});
  }catch(error){presetStatus.textContent=error.message;}
  finally{button.disabled=false;}
 });
@@ -2748,25 +2845,6 @@ document.querySelector('#preset-default').onclick=()=>{
  restoreConfigurationLayout(defaultConfiguration);
  presetStatus.textContent='Standardanordnung geladen.';
 };
-presetLoad.addEventListener('click',async()=>{
- const selected=presetList.value;
- presetLoad.disabled=true;
- try{
-   let preset;
-   if(selected.startsWith('local:'))preset=presets.get(selected.slice(6));
-   else if(selected.startsWith('shared:')){
-     const client=await connectDesigns();
-     const {data,error}=await client.from('fw_entries').select('payload').eq('id',selected.slice(7)).eq('kind','design').single();
-     if(error)throw new Error('Das Design konnte nicht geladen werden.');
-     preset=data.payload;
-   }
-   if(preset?.selections){
-     applyConfiguration(preset);
-     presetStatus.textContent='Design geladen.';
-   }
- }catch(error){presetStatus.textContent=error.message;}
- finally{presetLoad.disabled=!presetList.value;}
-});
 const presetFile=document.querySelector('#preset-file');
 document.querySelector('#preset-import').addEventListener('click',()=>presetFile.click());
 presetFile.addEventListener('change',async()=>{
@@ -2785,8 +2863,6 @@ presetFile.addEventListener('change',async()=>{
    return;
  }
  applyConfiguration(preset);
- presetList.value='';
- presetLoad.disabled=true;
  const adjusted=Object.keys(preset.layout??{}).length-Object.keys(furniturePositions).length;
  presetStatus.textContent=adjusted
    ?'Design geöffnet. '+adjusted+' Möbelposition(en) ausserhalb der Raumgrenzen oder ohne zugehöriges Möbelstück wurden zurückgesetzt.'
