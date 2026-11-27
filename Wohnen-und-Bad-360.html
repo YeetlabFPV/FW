@@ -47,6 +47,7 @@ main.expanded{position:fixed;inset:0;z-index:10;width:100vw}
 <div class="group"><label>Blender-Variante <select id="blender-variant">
 <option value="bisher">Entwurf</option>
 <option value="taubenblau-2" data-walk>Taubenblau · Stein · Nebelblau 2</option>
+<option value="puderblau" data-walk>Puderblau · Schwarzer Granit · Nebelblau</option>
 </select></label></div>
 <div class="view-mode" role="group" aria-label="Ansichtsmodus">
  <span aria-current="page">360°-Ansicht</span>
@@ -176,7 +177,7 @@ function select(next,material,heading){
  const stock=room==='bad'&&bathFloor==='bestand';
  const key=stock&&hasStockRender()?'bad-'+finish+'-bestand':room+'-'+finish+'-'+floor;
  document.querySelectorAll('[data-base-options]').forEach(group=>{group.hidden=variant!=='bisher';});
- const url=variant==='bisher'?images[key]:`Varianten/${variant}/${room}.jpg`;
+ const url=variant==='bisher'?images[key]:variant==='puderblau'?`Puderblau-${room}-360.jpg`:`Varianten/${variant}/${room}.jpg`;
  const panoramaFile=document.querySelector('#panorama-file');
  panoramaFile.hidden=variant==='bisher';
  panoramaFile.href=url;
