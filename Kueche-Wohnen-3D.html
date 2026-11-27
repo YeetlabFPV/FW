@@ -67,7 +67,7 @@ canvas.placing,canvas.panning{cursor:move}
 .stage.walking .stage-tools{display:none}
 .stage-tools button[data-tip]{position:relative;justify-content:center;width:38px;height:38px;padding:6px}
 .stage-tools svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:round;stroke-linecap:round}
-.stage-tools button[data-tip]:is(:hover,:focus-visible)::after{content:attr(data-tip);position:absolute;top:calc(100% + 6px);right:0;z-index:2;background:#263830;color:#fff;padding:4px 8px;border-radius:5px;white-space:nowrap;pointer-events:none}
+.stage-tools button[data-tip]:is(:hover,:focus-visible)::after{content:attr(data-tip);position:absolute;top:calc(100% + 6px);right:0;z-index:2;background:#263830;color:#fff;padding:4px 8px;border-radius:5px;width:max-content;white-space:nowrap;pointer-events:none}
 #dimensions{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 #dimensions line{stroke:#31584b;stroke-width:1.5}
 #dimensions text{fill:#224638;font:600 13px system-ui;paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round;text-anchor:middle}
@@ -621,7 +621,7 @@ const matchingBathFloors={charcoalCube:67,sandHerringbone:69};
 const bathFloorTiles={...matchingBathFloors,sand:33,slate:34,terracotta:35,white:36,terrazzo:44,...seamlessBathFloor};
 const wallFinishOptions={'Einfarbig':'paint','Bestandsplättli angemalt':'coated','Nebelblau · schmale Fliesen':'blue','Petrol · glasierte Stäbchen':'petrol','Waldgrün · versetzte Fliesen':'green','Blau · quadratische Fliesen':'square','Beige · schmale Fliesen':'beige','Elfenbein · glasierte Fliesen 10 × 30 cm':'ivory','Rosé · Hochformat':'roseStack','Eisblau · Rauten':'iceCube'};
 const linoPatterns={smooth:28,clouded:29,hex:30,speckled:31};
-let builtinsHandle='none',chairStyle='shell',coffeeStyle='wood';
+let builtinsHandle='none',chairStyle='shell',diningStyle='metal',coffeeStyle='wood';
 const defaultConfiguration={
  "layout": {
   "bed-main": {
@@ -920,8 +920,12 @@ let initialInventory=defaultConfiguration.furniture;
 try{initialInventory=JSON.parse(localStorage.getItem(furnitureInventoryKey))??initialInventory;}catch{}
 loadFurnitureInventory(initialInventory);
 const activeFurniture=(b,id)=>(!b.wardrobe||b.width===(furnitureGroups.get(id)?.wardrobeWidth??wardrobeWidths[b.wardrobe]))&&(!b.fold||b.fold===foldState);
+function diningTop(box){
+ if(diningStyle!=='oak')return box;
+ return {...box,x:box.x+(box.w-1.60)/2,y:box.y+(box.d-.80)/2,w:1.60,d:.80,z:.721,h:.029};
+}
 function furnitureBounds(id){
- const pieces=furnitureGroups.get(id).pieces.filter(b=>activeFurniture(b,id));
+ const pieces=furnitureGroups.get(id).pieces.filter(b=>activeFurniture(b,id)).map(b=>b.name==='Esstisch_Platte'?diningTop(b):b);
  const x1=Math.min(...pieces.map(b=>b.x)),x2=Math.max(...pieces.map(b=>b.x+b.w));
  const y1=Math.min(...pieces.map(b=>b.y)),y2=Math.max(...pieces.map(b=>b.y+b.d));
  return {x:(x1+x2)/2,y:(y1+y2)/2,w:(x2-x1)/2,d:(y2-y1)/2};
@@ -1212,6 +1216,43 @@ function build(){
    const foot=[x,y+box.d*yDirection*.22,box.z];
    const top=[x-box.w*xDirection*.40,y-box.d*yDirection*1.28,box.z+box.h];
    strut(foot,top,box.w*.64,4,charcoal);
+ }
+ function taperedTimber(foot,top,footSize,topSize,color){
+   const corners=[[-1,-1],[1,-1],[1,1],[-1,1]];
+   const ring=(center,size)=>corners.map(([x,y])=>[center[0]+x*size/2,center[1]+y*size/2,center[2]]);
+   const lower=ring(foot,footSize),upper=ring(top,topSize);
+   for(let i=0;i<4;i++){
+     const j=(i+1)%4;
+     const points=[lower[i],lower[j],upper[j],upper[i]];
+     const normal=unit(cross(subtract(points[1],points[0]),subtract(points[3],points[0])));
+     emitSurface(points.map(point=>({point,normal})),color,32);
+   }
+ }
+ const diningOak=rgb('#c7a276');
+ function oakDiningTable(box){
+   const top=diningTop(box),x=top.x+top.w/2,y=top.y+top.d/2;
+   roundedBox(top,[.105,.085,.007],diningOak,8);
+   for(const side of [-1,1]){
+     roundedBox({x:x-.63,y:y+side*.27-.014,z:.660,w:1.26,d:.028,h:.061},[.004,.004,.004],diningOak,8);
+     roundedBox({x:x+side*.63-.014,y:y-.27,z:.660,w:.028,d:.54,h:.061},[.004,.004,.004],diningOak,8);
+     for(const end of [-1,1]){
+       taperedTimber([x+side*.715,y+end*.322,0],[x+side*.625,y+end*.265,top.z],.033,.056,diningOak);
+     }
+   }
+ }
+ function openOakChair(box){
+   const x=box.x+box.w/2,y=box.y+box.d/2,back=y<5.46?-1:1;
+   roundedBox(box,[.025,.035,.012],diningOak,8);
+   for(const side of [-1,1]){
+     taperedTimber([x+side*.172,y-back*.163,0],[x+side*.167,y-back*.155,box.z+.012],.037,.050,diningOak);
+     taperedTimber([x+side*.172,y+back*.19,0],[x+side*.167,y+back*.151,box.z+.025],.033,.048,diningOak);
+     taperedTimber([x+side*.167,y+back*.151,box.z],[x+side*.167,y+back*.206,.855],.049,.044,diningOak);
+   }
+   roundedBox({x:x-.191,y:y+back*.178-.018,z:.719,w:.382,d:.036,h:.146},[.034,.014,.026],diningOak,8);
+   roundedBox({x:x-.181,y:y-back*.145-.016,z:.397,w:.362,d:.032,h:.049},[.005,.005,.005],diningOak,8);
+   for(const side of [-1,1]){
+     roundedBox({x:x+side*.16-.016,y:y-.15,z:.402,w:.032,d:.30,h:.045},[.005,.005,.005],diningOak,8);
+   }
  }
  function timberChair(box){
    const x=box.x+box.w/2,y=box.y+box.d/2,side=y<5.46?-1:1;
@@ -1688,6 +1729,7 @@ function build(){
        cupboardFront(b,color);
        return;
      }
+     if(b.name==='Esstisch_Platte'&&diningStyle==='oak'){oakDiningTable(b);return;}
      if(b.name==='Esstisch_Platte'||b.name==='Couchtisch_Platte'){
        if(b.name==='Couchtisch_Platte'&&coffeeStyle==='skids'){
          coffeeSkids(b);
@@ -1697,7 +1739,7 @@ function build(){
        return;
      }
      if(b.name==='Esstisch_Bein'){
-       angledTableLeg(b,6.49,5.46);
+       if(diningStyle!=='oak')angledTableLeg(b,6.49,5.46);
        return;
      }
      if(b.name==='Couchtisch_Bein'){
@@ -1706,7 +1748,8 @@ function build(){
      }
      if(b.name.startsWith('Essstuhl_')){
        if(b.name==='Essstuhl_Sitz'){
-         if(chairStyle==='wood')timberChair(b);
+         if(chairStyle==='openOak')openOakChair(b);
+         else if(chairStyle==='wood')timberChair(b);
          else diningChair(b);
        }
        return;
@@ -2206,7 +2249,8 @@ for(const [title,topics] of [
    ['Badmöbel',['bath','bathHandle']]
  ]],
  ['Wohnen',[
-   ['Sitzmöbel',['sofa','sectional','armchair','chairStyle']],
+   ['Sitzmöbel',['sofa','sectional','armchair']],
+   ['Essplatz',['diningStyle','chairStyle']],
    ['Tisch, Sideboard und Teppich',['coffeeStyle','sideboard','rug']]
  ]],
  ['Ganze Wohnung',[
@@ -2452,7 +2496,11 @@ chooser('builtinsHandle','Griffe der Einbauschränke',{'Keine Griffe':'none','Ho
  builtinsHandle=value;
  if(redraw){build();draw();}
 });
-chooser('chairStyle','Esszimmerstühle',{'Schwarze Schalenstühle':'shell','Holzstühle mit Herzlehne':'wood'},chairStyle,(value,redraw)=>{
+chooser('diningStyle','Esstisch',{'Holzplatte mit Metallgestell · 140 cm':'metal','Holztisch · 160 × 80 × 75 cm':'oak'},diningStyle,(value,redraw)=>{
+ diningStyle=value;
+ if(redraw){validateFurniturePositions();build();draw();}
+});
+chooser('chairStyle','Esszimmerstühle',{'Schwarze Schalenstühle':'shell','Holzstühle mit Herzlehne':'wood','Holzstühle mit offener Lehne':'openOak'},chairStyle,(value,redraw)=>{
  chairStyle=value;
  if(redraw){build();draw();}
 });
